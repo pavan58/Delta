@@ -1,0 +1,245 @@
+// FITIQ production data model (PostgreSQL).
+// Demo mode runs without a database; this schema backs persistent users,
+// wardrobe, feedback, price history and analytics.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String         @id @default(cuid())
+  authId       String         @unique // subject from the auth provider (Auth.js / Clerk / Cognito ...)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  deletedAt    DateTime?
+  profile      StyleProfile?
+  wardrobe     WardrobeItem[]
+  feedback     FitFeedback[]
+  sizeMap      SizeMapEntry[]
+  savedItems   SavedProduct[]
+  priceAlerts  PriceAlert[]
+  clicks       AffiliateClick[]
+}
+
+model StyleProfile {
+  userId          String   @id
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// AES-256-GCM encrypted JSON of BodyProfile (see src/lib/security/crypto.ts)
+  bodyEncrypted   String
+  build           String
+  fitTops         String
+  fitBottoms      String
+  styles          String[]
+  colors          String[]
+  avoidColors     String[]
+  brands          String[]
+  materials       String[]
+  patterns        String[]
+  budgetPerOutfit Int
+  budgetMonthly   Int?
+  city            String?
+  photoConsentAt  DateTime?
+  updatedAt       DateTime @updatedAt
+}
+
+model WardrobeItem {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category    String
+  colorFamily String
+  pattern     String
+  styles      String[]
+  fit         String?
+  seasons     String[]
+  occasions   String[]
+  label       String
+  /// Private object-storage key; served via short-lived signed URLs only
+  imageKey    String?
+  detectedBy  String?
+  addedAt     DateTime @default(now())
+
+  @@index([userId])
+}
+
+model FitFeedback {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  brand     String
+  retailer  String
+  category  String
+  size      String
+  outcome   String // too-tight | perfect | too-loose | too-short | too-long
+  buyAgain  Boolean
+  createdAt DateTime @default(now())
+
+  @@index([userId, brand])
+  @@index([brand, category, outcome])
+}
+
+model SizeMapEntry {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brand      String
+  retailer   String?
+  category   String
+  /// encrypted size value
+  sizeEnc    String
+  source     String
+  confidence Float
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, brand, category])
+}
+
+model Retailer {
+  id          String    @id
+  name        String
+  integration String
+  products    Product[]
+}
+
+model Provider {
+  id          String   @id
+  name        String
+  kind        String // official-api | affiliate-feed | merchant-feed
+  enabled     Boolean  @default(false)
+  lastSyncAt  DateTime?
+  lastError   String?
+  runs        SyncRun[]
+}
+
+model SyncRun {
+  id         String   @id @default(cuid())
+  providerId String
+  provider   Provider @relation(fields: [providerId], references: [id])
+  job        String
+  startedAt  DateTime @default(now())
+  finishedAt DateTime?
+  ok         Boolean?
+  detail     String?
+}
+
+model Product {
+  id              String       @id
+  retailerId      String
+  retailer        Retailer     @relation(fields: [retailerId], references: [id])
+  providerId      String
+  sourceKind      String
+  realtime        Boolean      @default(false)
+  sponsored       Boolean      @default(false)
+  brand           String
+  title           String
+  category        String
+  subcategory     String?
+  price           Int
+  mrp             Int?
+  discountPercent Int?
+  currency        String       @default("INR")
+  sizes           String[]
+  colors          String[]
+  fit             String?
+  material        String?
+  rating          Float?
+  reviewCount     Int?
+  imageUrl        String
+  productUrl      String
+  availability    Boolean
+  lastCheckedAt   DateTime
+  modelCode       String?
+  sku             String?
+  /// ProductAttributes JSON (colour family, styles, occasions, size chart ...)
+  attrs           Json
+  prices          PricePoint[]
+  updatedAt       DateTime     @updatedAt
+
+  @@index([category, price])
+  @@index([modelCode])
+  @@index([brand])
+}
+
+model PricePoint {
+  id          BigInt   @id @default(autoincrement())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  price       Int
+  mrp         Int?
+  available   Boolean
+  checkedAt   DateTime
+
+  @@index([productId, checkedAt])
+}
+
+model PriceAlert {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId   String
+  targetPrice Int
+  createdAt   DateTime @default(now())
+  triggeredAt DateTime?
+}
+
+model SavedProduct {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  createdAt DateTime @default(now())
+
+  @@id([userId, productId])
+}
+
+model Trend {
+  id          String   @id
+  name        String
+  category    String
+  fit         String?
+  volume      Float
+  sourceKind  String // editorial | search-trends | merchant-popularity
+  sourceLabel String
+  sourceUrl   String?
+  metricLabel String?
+  metricValue String?
+  asOf        DateTime?
+}
+
+model SearchLog {
+  id        BigInt   @id @default(autoincrement())
+  query     String
+  results   Int
+  createdAt DateTime @default(now())
+}
+
+model OutfitLog {
+  id        BigInt   @id @default(autoincrement())
+  occasion  String
+  budget    Int
+  count     Int
+  createdAt DateTime @default(now())
+}
+
+model AffiliateClick {
+  id         BigInt   @id @default(autoincrement())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  productId  String
+  retailerId String
+  createdAt  DateTime @default(now())
+}
+
+model Conversion {
+  id          BigInt   @id @default(autoincrement())
+  retailerId  String
+  network     String
+  orderRef    String
+  amount      Int?
+  commission  Int?
+  reportedAt  DateTime @default(now())
+}
