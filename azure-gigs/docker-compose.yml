@@ -1,0 +1,47 @@
+# Local development / evaluation stack:  docker compose up --build
+# App: http://localhost:3000   Postgres: localhost:5432   Redis: localhost:6379
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: azuregigs
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-azuregigs-local-only}
+      POSTGRES_DB: azuregigs
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U azuregigs"]
+      interval: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+
+  migrate:
+    build: { context: ., target: tools }
+    environment:
+      DATABASE_URL: postgresql://azuregigs:${POSTGRES_PASSWORD:-azuregigs-local-only}@db:5432/azuregigs?schema=public
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Set ENCRYPTION_KEY in .env (openssl rand -base64 32)}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+    depends_on:
+      db: { condition: service_healthy }
+
+  app:
+    build: { context: ., target: runner }
+    environment:
+      DATABASE_URL: postgresql://azuregigs:${POSTGRES_PASSWORD:-azuregigs-local-only}@db:5432/azuregigs?schema=public
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      REDIS_URL: redis://redis:6379
+      AZURE_AD_CLIENT_ID: ${AZURE_AD_CLIENT_ID:-}
+      AZURE_AD_CLIENT_SECRET: ${AZURE_AD_CLIENT_SECRET:-}
+      AZURE_AD_TENANT: ${AZURE_AD_TENANT:-organizations}
+    ports: ["3000:3000"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_started }
+
+volumes:
+  pgdata:

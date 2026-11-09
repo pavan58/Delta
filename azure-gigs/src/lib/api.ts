@@ -47,8 +47,11 @@ export function withUser<C extends object>(handler: Handler<C>, opts: { limit?: 
       checkOrigin(req);
       const user = await userFromToken(req.cookies.get(SESSION_COOKIE)?.value);
       if (!user) throw new AppError(401, "Unauthorized", "Sign in required.");
-      const rl = rateLimit(`u:${user.id}`, opts.limit ?? 240, 60_000);
-      if (!rl.ok) throw new AppError(429, "TooManyRequests", `Rate limit exceeded. Retry in ${rl.retryAfter}s.`);
+      // A global per-user budget plus a per-route-group budget (e.g. /api/incidents).
+      const group = req.nextUrl.pathname.split("/").slice(0, 3).join("/");
+      const global = rateLimit(`u:${user.id}`, 600, 60_000);
+      const route = rateLimit(`u:${user.id}:${req.method}:${group}`, opts.limit ?? 240, 60_000);
+      if (!global.ok || !route.ok) throw new AppError(429, "TooManyRequests", `Rate limit exceeded. Retry in ${Math.max(global.retryAfter, route.retryAfter)}s.`);
       const out = await handler(req, { ...ctx, user });
       return out instanceof Response ? out : NextResponse.json(out ?? { ok: true });
     } catch (e) {

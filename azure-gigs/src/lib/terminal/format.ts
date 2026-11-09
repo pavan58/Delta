@@ -76,7 +76,10 @@ export function asTable(rows: Any[]): string {
   if (!Array.isArray(rows)) rows = [rows];
   if (!rows.length) return "";
   if (typeof rows[0] !== "object" || rows[0] === null) return rows.map(cell).join("\n");
-  const cols = [...new Set(rows.flatMap((r) => Object.keys(r).filter((k) => r[k] === null || typeof r[k] !== "object" || Array.isArray(r[k]))))];
+  let cols = [...new Set(rows.flatMap((r) => Object.keys(r).filter((k) => r[k] === null || typeof r[k] !== "object" || Array.isArray(r[k]))))];
+  // Like the real CLI's table transformers: hide long identifiers when there are other columns to show.
+  const NOISY = ["id", "vmId", "type", "fqdns", "etag", "tenantId", "objectId"];
+  if (cols.length > 4) cols = cols.filter((c) => !NOISY.includes(c));
   const title = (c: string) => c.replace(/^./, (x) => x.toUpperCase());
   const widths = cols.map((c) => Math.min(60, Math.max(title(c).length, ...rows.map((r) => cell(r[c]).length))));
   const line = (vals: string[]) => vals.map((v, i) => v.slice(0, widths[i]).padEnd(widths[i])).join("  ").trimEnd();

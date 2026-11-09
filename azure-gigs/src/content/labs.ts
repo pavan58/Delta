@@ -9,12 +9,22 @@ const NOTES = (keywords: string[] = [], min = 40): Check => ({ kind: "notes", ca
 const NO_MGMT_PORTS: Check = { kind: "nsgNoOpenPort", category: "security", label: "No NSG rule exposes SSH (22) or RDP (3389) to the whole Internet", ports: [22, 3389], hint: "Restrict SSH/RDP rules to a specific source IP or remove them; use Bastion or run-command for management." };
 const TAGGED = (type: string, name: string, tag = "env"): Check => ({ kind: "resource", category: "security", label: `'${name}' is tagged with '${tag}' (governance)`, type, name, where: [{ path: `tags.${tag}`, op: "exists" }], hint: `Add a tag ${tag}=<value> so cost and ownership can be tracked.` });
 
+const CAPSTONE_QUESTIONS: Record<string, { q: string; a: string }[]> = {
+  "capstone-ha-web-app": [{ q: "How do availability zones and availability sets differ?", a: "Zones place VMs in physically separate datacenters in a region (99.99% SLA); availability sets spread VMs across fault/update domains within one datacenter (99.95%)." }, { q: "How would you put a load balancer in front of the two VMs?", a: "Standard Load Balancer (zone-redundant frontend), backend pool with both NICs, a health probe on port 80, and a load-balancing rule; NSGs must allow the AzureLoadBalancer tag." }],
+  "capstone-secure-network": [{ q: "How do you restrict database traffic to the web tier only?", a: "NSG on the data subnet allowing 1433 only from the web subnet CIDR (or an application security group), denying everything else; private endpoints for PaaS databases." }, { q: "Why is VNet peering not transitive and how do you route spoke-to-spoke?", a: "Peering only connects two VNets. Use a hub firewall/NVA with UDRs, Azure Virtual WAN, or direct peerings." }],
+  "capstone-cicd": [{ q: "How do approvals work in YAML pipelines?", a: "Deployment jobs target environments; approvals and checks are configured on the environment and pause the run until approved." }, { q: "How do you keep pipeline credentials safe?", a: "Service connections with workload identity federation, Key Vault-linked variable groups, least-privilege scopes, and no secrets in the repo." }],
+  "capstone-monitoring": [{ q: "What belongs in a Log Analytics workspace design?", a: "Workspace per region/environment or centralized with RBAC, retention per table, data collection rules, diagnostic settings from every resource, and cost controls." }, { q: "How do you avoid alert fatigue?", a: "Alert on symptoms (SLOs), use dynamic thresholds, severity levels, action groups to the right on-call, and regular tuning." }],
+  "capstone-outage": [{ q: "What does a good RCA contain?", a: "Timeline, impact, detection, root cause with evidence, resolution, verification, and preventive actions with owners." }, { q: "How do you prioritise multiple simultaneous incidents?", a: "By business impact and severity; mitigate the highest impact first, communicate status, and delegate where possible." }],
+  "capstone-devops-aks": [{ q: "How does AKS pull images from ACR securely?", a: "Attach the registry so the kubelet managed identity gets AcrPull; no admin user or stored passwords." }, { q: "How would you roll back a bad deployment on AKS?", a: "kubectl rollout undo (or redeploy the previous image tag via the pipeline); use readiness probes and progressive rollouts to catch failures early." }],
+};
+
 function lab(d: Omit<LabDef, "prerequisites" | "commonMistakes" | "interviewQuestions"> & Partial<Pick<LabDef, "prerequisites" | "commonMistakes" | "interviewQuestions">>): LabDef {
   const checks = [...d.checks];
   if (!checks.some((c) => c.category === "documentation")) checks.push(NOTES());
   if (!checks.some((c) => c.category === "security")) checks.push(NO_MGMT_PORTS);
   if (!checks.some((c) => c.category === "execution")) checks.push({ kind: "activity", category: "execution", label: "Changes were made in your subscription during the lab", operation: ".*", min: 1 });
-  return { prerequisites: [], commonMistakes: [], interviewQuestions: [], ...d, checks };
+  const interviewQuestions = d.interviewQuestions?.length ? d.interviewQuestions : CAPSTONE_QUESTIONS[d.slug] ?? [{ q: `Walk me through how you would deliver "${d.title}" in production.`, a: "Clarify requirements, design for security and resilience, automate with IaC/pipelines, verify with monitoring and tests, and document the runbook." }];
+  return { prerequisites: [], commonMistakes: [], ...d, interviewQuestions, checks };
 }
 
 // ------------------------------------------------------------------ core labs

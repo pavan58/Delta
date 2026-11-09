@@ -16,7 +16,18 @@ import { render } from "./format";
 import { CliError, CmdResult, Term } from "./types";
 import { readFile, resolvePath, writeFile } from "./vfs";
 
-const ALIASES: Record<string, string> = { g: "resource-group", n: "name", l: "location", o: "output", h: "help", y: "yes", s: "subscription" };
+const ALIASES: Record<string, string> = { g: "resource-group", n: "name", l: "location", o: "output", h: "help", y: "yes" };
+/** Command-specific short flags (longest matching prefix wins). */
+const CMD_ALIASES: [string, Record<string, string>][] = [
+  ["account set", { s: "subscription" }],
+  ["acr build", { r: "registry", t: "image", f: "file" }],
+  ["webapp create", { p: "plan" }],
+  ["sql server create", { u: "admin-user", p: "admin-password" }],
+  ["sql server firewall-rule", { s: "server" }],
+  ["sql db", { s: "server" }],
+  ["storage blob", { c: "container-name", f: "file" }],
+  ["monitor log-analytics query", { w: "workspace" }],
+];
 
 type Handler = (t: Term, p: Parsed) => Promise<unknown>;
 
@@ -616,7 +627,8 @@ export async function runAz(t: Term, argv: string[]): Promise<CmdResult> {
   for (const a of argv) { if (a.startsWith("-")) break; words.push(a); }
   const key = KEYS.find((k) => k.split(" ").every((w, i) => words[i] === w));
   const rest = argv.slice(key ? key.split(" ").length : 0);
-  const p = parseArgs(rest, ALIASES);
+  const extra = key ? CMD_ALIASES.filter(([prefix]) => key.startsWith(prefix)).reduce((a, [, m]) => ({ ...a, ...m }), {}) : {};
+  const p = parseArgs(rest, { ...ALIASES, ...extra });
   if (!key || p.bools.has("help")) {
     const prefix = key ?? words.join(" ");
     const h = helpFor(prefix);

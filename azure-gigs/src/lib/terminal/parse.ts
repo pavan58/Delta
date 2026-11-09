@@ -39,7 +39,7 @@ export function splitTopLevel(line: string, ops: string[]): { parts: string[]; s
     if (c === "{" || c === "(") depth++;
     if (c === "}" || c === ")") depth--;
     if (depth === 0) {
-      const op = ops.find((o) => line.startsWith(o, i) && !(o === "|" && line[i + 1] === "|") && !(o === "&" && line[i + 1] === "&"));
+      const op = ops.find((o) => line.startsWith(o, i) && !(o === "|" && (line[i + 1] === "|" || line[i - 1] === "|")) && !(o === "&" && (line[i + 1] === "&" || line[i - 1] === "&")));
       if (op) { parts.push(cur.trim()); seps.push(op); cur = ""; i += op.length - 1; continue; }
     }
     cur += c;
