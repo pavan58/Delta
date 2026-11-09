@@ -10,8 +10,8 @@ Azure Gigs is a single Next.js application: the UI and the API routes run in the
 
 1. Import the repository in Vercel and set **Root Directory** to `azure-gigs`.
 2. Add environment variables (Production and Preview): `DATABASE_URL`, `ENCRYPTION_KEY`, `APP_URL` (your Vercel domain), and optionally `AZURE_AD_*` and `ADMIN_*`.
-3. `vercel.json` runs `prisma migrate deploy` before `npm run build`, so migrations apply on every deploy.
-4. Seed once from your machine or CI against the production database: `DATABASE_URL=... npm run db:seed`. Running it again is safe (it upserts).
+3. `vercel.json` runs `prisma migrate deploy` and the idempotent content seed before `npm run build`, so every deploy has an up-to-date schema and lab library. With Supabase, use the **session pooler** host (`aws-N-<region>.pooler.supabase.com:5432`, user `<role>.<project-ref>`) and append `?schema=azuregigs&sslmode=require&connection_limit=1`; the direct `db.<ref>.supabase.co` host is IPv6-only and unreachable from Vercel.
+4. To seed manually instead: `DATABASE_URL=... npm run db:seed` (it upserts, so re-running is safe).
 5. Serverless note: the in-memory rate limiter is per instance. Put Vercel Firewall or WAF rate limits in front of `/api/auth/*`, or implement the Redis store described in SECURITY.md.
 
 ## Option B - Azure Container Apps (backend containers)
