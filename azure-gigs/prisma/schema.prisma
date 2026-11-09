@@ -1,0 +1,350 @@
+// Azure Gigs data model.
+// All learner-owned rows carry userId and every query in src/lib filters by it (tenant isolation).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  LEARNER
+  ADMIN
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String
+  passwordHash  String
+  role          Role     @default(LEARNER)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  lastActiveAt  DateTime @default(now())
+  streakDays    Int      @default(0)
+  // Simulated Linux home directory for the bash terminal (bounded size).
+  shellState    Json     @default("{}")
+  organizationId String?
+  organization  Organization? @relation(fields: [organizationId], references: [id])
+
+  sessions          Session[]
+  subscriptions     Subscription[]
+  resources         SimulatedResource[]
+  commands          CommandHistory[]
+  activityLogs      ActivityLog[]
+  submissions       LabSubmission[]
+  incidents         Incident[]
+  certificates      Certificate[]
+  progress          UserProgress[]
+  azureAccounts     ConnectedAzureAccount[]
+  assessmentAttempts AssessmentAttempt[]
+  auditLogs         AuditLog[]
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  tokenHash  String   @unique
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+  userAgent  String?
+  @@index([userId])
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  users     User[]
+}
+
+// Simulated subscription. One sandbox subscription is created per learner at registration.
+model Subscription {
+  id             String   @id @default(cuid())
+  subscriptionId String   @unique // GUID shown to the learner
+  displayName    String
+  state          String   @default("Enabled")
+  isSimulated    Boolean  @default(true)
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+  resources      SimulatedResource[]
+  @@index([userId])
+}
+
+model SimulatedResource {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscriptionDbId String
+  subscription   Subscription @relation(fields: [subscriptionDbId], references: [id], onDelete: Cascade)
+  resourceGroup  String   // resource group name ("" for tenant-level objects like Entra users)
+  rgKey          String   // lower-cased resource group name for case-insensitive uniqueness
+  type           String   // e.g. Microsoft.Compute/virtualMachines
+  name           String
+  nameKey        String   // lower-cased name
+  location       String
+  status         String   @default("Succeeded")
+  properties     Json     @default("{}")
+  tags           Json     @default("{}")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  dependsOn      ResourceDependency[] @relation("dependent")
+  dependents     ResourceDependency[] @relation("dependency")
+
+  @@unique([userId, type, rgKey, nameKey])
+  @@index([userId, type])
+  @@index([userId, rgKey])
+}
+
+model ResourceDependency {
+  id           String @id @default(cuid())
+  fromId       String // the resource that depends on ...
+  toId         String // ... this resource
+  kind         String // e.g. "nic", "subnet", "nsg", "publicIp", "disk"
+  from         SimulatedResource @relation("dependent", fields: [fromId], references: [id], onDelete: Cascade)
+  to           SimulatedResource @relation("dependency", fields: [toId], references: [id], onDelete: Cascade)
+  @@unique([fromId, toId, kind])
+  @@index([toId])
+}
+
+model CommandHistory {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shell      String   // az | pwsh | bash
+  command    String
+  stdout     String
+  stderr     String
+  exitCode   Int
+  durationMs Int
+  changes    Json     @default("[]")
+  createdAt  DateTime @default(now())
+  @@index([userId, createdAt])
+}
+
+model ActivityLog {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resourceId   String?  // SimulatedResource.id (not FK: logs outlive resources)
+  resourceName String?
+  resourceType String?
+  resourceGroup String?
+  operation    String   // e.g. "Create or Update Virtual Machine"
+  status       String   // Succeeded | Failed | Started
+  caller       String   // email / principal / "system"
+  source       String   @default("portal") // portal | cli | pwsh | system | fault
+  details      Json     @default("{}")
+  createdAt    DateTime @default(now())
+  @@index([userId, createdAt])
+  @@index([userId, resourceId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  ip        String?
+  details   Json     @default("{}")
+  createdAt DateTime @default(now())
+  @@index([userId, createdAt])
+}
+
+model LearningPath {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  description String
+  level       String
+  order       Int
+  modules     Module[]
+  certificates Certificate[]
+}
+
+model Module {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  description String
+  order       Int
+  pathId      String
+  path        LearningPath @relation(fields: [pathId], references: [id], onDelete: Cascade)
+  labs        ModuleLab[]
+  assessments Assessment[]
+}
+
+model ModuleLab {
+  moduleId String
+  labId    String
+  order    Int
+  module   Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  lab      Lab    @relation(fields: [labId], references: [id], onDelete: Cascade)
+  @@id([moduleId, labId])
+}
+
+model Lab {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  title           String
+  difficulty      String   // Beginner | Intermediate | Advanced
+  category        String
+  objective       String
+  scenario        String
+  prerequisites   Json     @default("[]")
+  durationMinutes Int
+  expectedOutcome String
+  commands        Json     @default("[]")
+  commonMistakes  Json     @default("[]")
+  hints           Json     @default("[]")
+  solution        String
+  interviewQuestions Json  @default("[]")
+  checks          Json     // grading checks interpreted by src/lib/labs/grader.ts
+  isCapstone      Boolean  @default(false)
+  steps           LabStep[]
+  modules         ModuleLab[]
+  submissions     LabSubmission[]
+  progress        UserProgress[]
+}
+
+model LabStep {
+  id      String @id @default(cuid())
+  labId   String
+  lab     Lab    @relation(fields: [labId], references: [id], onDelete: Cascade)
+  order   Int
+  title   String
+  body    String
+  @@index([labId])
+}
+
+model LabSubmission {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  labId       String
+  lab         Lab      @relation(fields: [labId], references: [id], onDelete: Cascade)
+  notes       String   @default("")
+  evidence    Json     @default("{}")
+  createdAt   DateTime @default(now())
+  score       LabScore?
+  @@index([userId, labId])
+}
+
+model LabScore {
+  id             String   @id @default(cuid())
+  submissionId   String   @unique
+  submission     LabSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  total          Int
+  configuration  Int
+  execution      Int
+  security       Int
+  documentation  Int
+  passed         Boolean
+  results        Json     // per-check results
+  createdAt      DateTime @default(now())
+}
+
+model UserProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  labId       String
+  lab         Lab      @relation(fields: [labId], references: [id], onDelete: Cascade)
+  status      String   // started | completed
+  bestScore   Int      @default(0)
+  attempts    Int      @default(0)
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+  @@unique([userId, labId])
+}
+
+model Incident {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ticketNumber String
+  faultType   String
+  title       String
+  description String
+  severity    String
+  impact      String
+  targetResourceId String?
+  faultState  Json     // what was changed, so the grader can verify the fix (hidden from learner)
+  status      String   @default("Open") // Open | Resolved | Abandoned
+  hintsUsed   Int      @default(0)
+  dueAt       DateTime
+  createdAt   DateTime @default(now())
+  resolution  IncidentResolution?
+  @@index([userId, status])
+}
+
+model IncidentResolution {
+  id           String   @id @default(cuid())
+  incidentId   String   @unique
+  incident     Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  rootCause    String
+  fixSummary   String
+  verification String
+  score        Int
+  breakdown    Json
+  createdAt    DateTime @default(now())
+}
+
+model Assessment {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  moduleId  String?
+  module    Module?  @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  title     String
+  questions Json     // [{q, options[], answer(index), explanation}]
+  passMark  Int      @default(70)
+  attempts  AssessmentAttempt[]
+}
+
+model AssessmentAttempt {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assessmentId String
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  score        Int
+  answers      Json
+  createdAt    DateTime @default(now())
+  @@index([userId, assessmentId])
+}
+
+model Certificate {
+  id             String   @id @default(cuid())
+  certificateId  String   @unique // public verification id
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pathId         String
+  path           LearningPath @relation(fields: [pathId], references: [id], onDelete: Cascade)
+  learnerName    String
+  completedLabs  Int
+  score          Int
+  issuedAt       DateTime @default(now())
+  @@unique([userId, pathId])
+}
+
+model ConnectedAzureAccount {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantId        String
+  accountUpn      String
+  // AES-256-GCM encrypted OAuth tokens (never plain text).
+  encryptedAccessToken  String
+  encryptedRefreshToken String?
+  accessTokenExpiresAt  DateTime
+  defaultSubscriptionId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  @@unique([userId, tenantId])
+}
