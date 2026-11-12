@@ -13,19 +13,21 @@ export interface CustomContent {
   vocabulary: Word[];
   interview: Array<InterviewQuestion & { category: string }>;
   ieltsSpeaking: Array<{ part: 1 | 2 | 3; topic: string; prompt: string; bullets: string[] }>;
+  lessons: Array<{ day: number; title: string; objective: string; task: string; lesson: string[]; keywords: string[]; minSeconds: number }>;
 }
 
-const EMPTY: CustomContent = { vocabulary: [], interview: [], ieltsSpeaking: [] };
+const EMPTY: CustomContent = { vocabulary: [], interview: [], ieltsSpeaking: [], lessons: [] };
 let cache: Promise<CustomContent> | null = null;
 
 async function load(): Promise<CustomContent> {
   const sb = getSupabase();
   if (!sb) return EMPTY;
   try {
-    const [v, i, q] = await Promise.all([
+    const [v, i, q, l] = await Promise.all([
       sb.from("vocabulary").select("*").eq("published", true).limit(500),
       sb.from("interview_questions").select("*").eq("published", true).limit(500),
       sb.from("ielts_questions").select("*").eq("published", true).eq("module", "speaking").limit(200),
+      sb.from("daily_lessons").select("*").eq("published", true).limit(30),
     ]);
     return {
       vocabulary: ((v.data ?? []) as Array<Record<string, unknown>>).map((r) => ({
@@ -39,6 +41,9 @@ async function load(): Promise<CustomContent> {
         const c = (r.content ?? {}) as { part?: 1 | 2 | 3; topic?: string; prompt?: string; bullets?: string[] };
         return { part: c.part ?? 1, topic: c.topic ?? "Custom", prompt: c.prompt ?? String(r.title ?? ""), bullets: c.bullets ?? [] };
       }),
+      lessons: ((l.data ?? []) as Array<Record<string, unknown>>).map((r) => ({
+        day: Number(r.day), title: String(r.title), objective: String(r.objective), task: String(r.task), lesson: (r.lesson as string[]) ?? [], keywords: (r.keywords as string[]) ?? [], minSeconds: Number(r.min_seconds ?? 45),
+      })),
     };
   } catch {
     return EMPTY;

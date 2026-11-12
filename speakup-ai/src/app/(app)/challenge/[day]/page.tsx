@@ -12,11 +12,15 @@ import { saveSpeakingSession } from "@/lib/store/actions";
 import { setState, useAppState } from "@/lib/store/store";
 import { XP } from "@/lib/gamification";
 import { ShareButtons } from "@/components/sharing/ShareCard";
+import { useCustomContent } from "@/lib/content/custom";
 
 export default function DayPage({ params }: { params: Promise<{ day: string }> }) {
   const { day: dayStr } = use(params);
   const day = Number(dayStr);
-  const lesson = getLesson(day);
+  const override = useCustomContent().lessons.find((l) => l.day === day);
+  const base = getLesson(day);
+  // Admin curriculum overrides replace the text fields of a built-in day.
+  const lesson = base && override ? { ...base, title: override.title, objective: override.objective, task: override.task, lesson: override.lesson.length ? override.lesson : base.lesson, keywords: override.keywords.length ? override.keywords : base.keywords, minSeconds: override.minSeconds } : base;
   const prev = useAppState((s) => s.challenge[day]);
   const profile = useAppState((s) => s.profile);
   const [result, setResult] = useState<SpeakingResult | null>(null);

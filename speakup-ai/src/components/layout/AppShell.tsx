@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { fetchAiStatus } from "@/lib/ai/client";
 import {
   BookOpen, Briefcase, CalendarCheck, Flame, GraduationCap, LayoutDashboard, LineChart, Mic, Settings, Shield, Users, Wand2, Zap,
 } from "lucide-react";
@@ -36,12 +37,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const auth = useAuth();
   useCloudSync();
   const streak = currentStreak(activity);
+  const [features, setFeatures] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    fetchAiStatus().then((st) => st && setFeatures(st.features ?? {}));
+  }, []);
+  // Admin can switch modules off (feature flags). Map path prefix -> flag key.
+  const flagOf = (href: string) => ({ "/speak": "speak", "/grammar": "grammar", "/challenge": "challenge", "/ielts": "ielts", "/interview": "interview", "/vocabulary": "vocabulary", "/community": "community" } as Record<string, string>)[href];
+  const enabled = (href: string) => features[flagOf(href) ?? ""] !== false;
+  const currentFlagHref = Object.keys({ "/speak": 1, "/grammar": 1, "/challenge": 1, "/ielts": 1, "/interview": 1, "/vocabulary": 1, "/community": 1 }).find((h) => path === h || path.startsWith(h + "/"));
+  const blocked = currentFlagHref ? !enabled(currentFlagHref) : false;
 
   useEffect(() => {
     if (hydrated && !profile?.onboarded && path !== "/grammar") router.replace("/start");
   }, [hydrated, profile, path, router]);
 
-  const nav = auth.role === "admin" ? [...NAV, { href: "/admin", label: "Admin", icon: Shield }] : NAV;
+  const nav = (auth.role === "admin" ? [...NAV, { href: "/admin", label: "Admin", icon: Shield }] : NAV).filter((n) => enabled(n.href));
   const active = (href: string) => path === href || path.startsWith(href + "/");
 
   return (
@@ -77,11 +87,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
           </div>
         </header>
-        <main className="mx-auto w-full max-w-5xl px-4 pb-28 pt-5 md:pb-10">{hydrated ? children : <div className="h-40 animate-pulse rounded-2xl surface-2" />}</main>
+        <main className="mx-auto w-full max-w-5xl px-4 pb-28 pt-5 md:pb-10">{!hydrated ? <div className="h-40 animate-pulse rounded-2xl surface-2" /> : blocked ? <div className="card p-6">This module is temporarily unavailable. Please try another activity.</div> : children}</main>
       </div>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-base bg-[var(--surface)] pb-[env(safe-area-inset-bottom)] md:hidden" aria-label="Main mobile">
-        {NAV.filter((n) => n.mobile).map((n) => (
+        {NAV.filter((n) => n.mobile && enabled(n.href)).map((n) => (
           <Link key={n.href} href={n.href} className={cn("flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium", active(n.href) ? "text-brand-600 dark:text-brand-300" : "text-muted")}>
             <n.icon size={20} /> {n.label}
           </Link>

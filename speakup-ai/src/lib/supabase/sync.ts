@@ -60,6 +60,7 @@ export function buildPayload(s: AppState, userId: string) {
           explain_lang: s.profile.explainLang,
         }]
       : [],
+    ielts_profiles: s.profile?.wantsIelts ? [{ user_id: userId, module: s.profile.ieltsModule, target_band: s.profile.targetBand }] : [],
     user_settings: [{
       user_id: userId,
       theme: s.settings.theme,
@@ -102,6 +103,13 @@ export function buildPayload(s: AppState, userId: string) {
       minutes: Object.entries(s.activity).filter(([d]) => d >= wk).reduce((t, [, a]) => t + a.minutes, 0),
       sessions: Object.entries(s.activity).filter(([d]) => d >= wk).reduce((t, [, a]) => t + a.sessions, 0),
     }],
+    interview_reports: s.interviews.map((i) => ({
+      session_id: i.id, user_id: userId, total: i.total, created_at: i.date,
+      breakdown: Object.fromEntries((["communication", "grammar", "vocabulary", "relevance", "fluency", "pronunciation"] as const).map((k) => {
+        const v = i.answers.map((a) => a.scores[k]).filter((x): x is number => x !== null);
+        return [k, v.length ? Math.round(avg(v)) : null];
+      })),
+    })),
     leaderboard_entries: s.settings.leaderboardOptIn
       ? [{ user_id: userId, week_start: wk, xp: weeklyXp(s.activity), display_name: (s.settings.displayName || s.profile?.name || "Learner").slice(0, 40), streak: currentStreak(s.activity) }]
       : [],
@@ -109,7 +117,7 @@ export function buildPayload(s: AppState, userId: string) {
 }
 
 const CONFLICT: Record<string, string> = {
-  user_profiles: "id", learning_preferences: "user_id", user_settings: "user_id", daily_scores: "user_id,date",
+  user_profiles: "id", learning_preferences: "user_id", ielts_profiles: "user_id", interview_reports: "session_id", user_settings: "user_id", daily_scores: "user_id,date",
   lesson_progress: "user_id,lesson_key", saved_vocabulary: "user_id,word_id", achievements: "user_id,achievement_id",
   english_streaks: "user_id", weekly_progress: "user_id,week_start", leaderboard_entries: "user_id,week_start",
 };
