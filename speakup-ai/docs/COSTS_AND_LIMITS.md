@@ -3,6 +3,7 @@
 ## What works with no paid API (Free Mode)
 
 Everything below runs at ₹0 with no keys:
+- Spoken English Foundation Course (28 grammar lessons with exercises and speaking drills).
 - Landing page, guest onboarding, dashboard, progress charts, streaks, XP, badges, PNG share cards, WhatsApp links.
 - AI English Speaking Teacher in **rule-based** mode (corrections, explanations in English/Hindi, follow-up questions,
   text-to-speech with replay and slow mode, browser speech recognition).

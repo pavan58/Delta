@@ -14,7 +14,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   ai_daily_limit_guest: Number(process.env.AI_DAILY_LIMIT_GUEST ?? 10),
   ai_daily_limit_user: Number(process.env.AI_DAILY_LIMIT_USER ?? 30),
   ai_global_daily_limit: Number(process.env.AI_GLOBAL_DAILY_LIMIT ?? 2000),
-  features: { speak: true, grammar: true, challenge: true, ielts: true, interview: true, vocabulary: true, community: true },
+  features: { foundation: true, speak: true, grammar: true, challenge: true, ielts: true, interview: true, vocabulary: true, community: true },
 };
 
 let cache: { at: number; value: AppSettings } | null = null;

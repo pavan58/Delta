@@ -2,7 +2,7 @@ import type { GrammarCategory } from "@/lib/grammar/engine";
 
 export type Level = "beginner" | "elementary" | "intermediate" | "upper-intermediate" | "advanced";
 export type ExplainLang = "en" | "hi" | "both";
-export type ModuleKey = "speak" | "grammar" | "challenge" | "ielts" | "interview" | "vocabulary";
+export type ModuleKey = "speak" | "grammar" | "challenge" | "ielts" | "interview" | "vocabulary" | "foundation";
 
 export interface Profile {
   name: string;
@@ -78,6 +78,14 @@ export interface ChallengeDay {
   score: number;
   transcript: string;
   scores: ScoreBreakdown;
+}
+
+export interface FoundationProgress {
+  completedAt: string;
+  /** Best exercise score (% correct). */
+  best: number;
+  attempts: number;
+  spoke: boolean;
 }
 
 export interface VocabCard {
@@ -156,6 +164,7 @@ export interface AppState {
   sessions: SpeakingSession[];
   mistakes: Mistake[];
   challenge: Record<number, ChallengeDay>;
+  foundation: Record<string, FoundationProgress>;
   vocab: Record<string, VocabCard>;
   learnedWords: string[];
   ielts: IeltsAttempt[];

@@ -175,10 +175,62 @@ test("PWA manifest and service worker are served", async ({ request }) => {
 
 test("no horizontal overflow on key pages (mobile)", async ({ page }) => {
   await onboard(page);
-  for (const p of ["/dashboard", "/speak", "/challenge", "/ielts", "/interview", "/vocabulary", "/progress", "/community", "/profile"]) {
+  for (const p of ["/dashboard", "/foundation", "/foundation/tense-review", "/speak", "/challenge", "/ielts", "/interview", "/vocabulary", "/progress", "/community", "/profile"]) {
     await page.goto(p);
     await page.waitForTimeout(300);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow, p).toBeLessThanOrEqual(1);
   }
+});
+
+test("foundation course: overview lists 28 lessons across grammar, verbs, adjectives and tenses", async ({ page }) => {
+  await onboard(page);
+  await page.goto("/foundation");
+  await expect(page.getByRole("heading", { name: "Spoken English Foundation Course" })).toBeVisible();
+  for (const t of ["Unit 1 · Building blocks", "Unit 2 · Verbs", "Unit 3 · Describing words", "Unit 4 · Tenses", "Unit 5 · Sentence skills"]) await expect(page.getByText(t)).toBeVisible();
+  await expect(page.getByText("0/28 lessons")).toBeVisible();
+});
+
+test("foundation lesson: learn → practise (6 exercises) → speak, and progress is saved", async ({ page }) => {
+  await onboard(page);
+  await page.goto("/foundation/verb-to-be");
+  await expect(page.getByText(/I am · he\/she\/it is/)).toBeVisible();
+  // Hindi speakers get English + Hindi by default; the toggle hides/shows it.
+  await expect(page.getByText(/I के साथ am/)).toBeVisible();
+  await page.getByRole("button", { name: /हिंदी/ }).click();
+  await expect(page.getByText(/I के साथ am/)).toBeHidden();
+  await page.getByRole("button", { name: /Start practice/ }).click();
+  // Exercise 1 (fill): correct answer.
+  await page.getByLabel("Your answer").fill("is");
+  await page.getByRole("button", { name: "Check" }).click();
+  await expect(page.getByText("✅ Correct!")).toBeVisible();
+  await page.getByRole("button", { name: /^Next/ }).click();
+  // Exercises 2–6: answer anything to move through (wrong answers show the correct one).
+  for (let i = 0; i < 5; i++) {
+    if (await page.getByLabel("Your answer").count()) {
+      await page.getByLabel("Your answer").fill("xyz");
+      await page.getByRole("button", { name: "Check" }).click();
+    } else if (await page.getByText("Put the words in the correct order").count()) {
+      const words = page.locator(".card button.rounded-lg:not([disabled])");
+      while (await words.count()) await words.first().click();
+      await page.getByRole("button", { name: "Check" }).click();
+    } else {
+      await page.locator(".card .grid button").first().click();
+    }
+    await page.getByRole("button", { name: /Next|Finish practice/ }).click();
+  }
+  await expect(page.getByText(/Practice complete: \d+% correct/)).toBeVisible();
+  await expect(page.getByText("Speaking drill", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Next lesson: Have, has, had/ })).toBeVisible();
+  await page.goto("/foundation");
+  await expect(page.getByText("1/28 lessons")).toBeVisible();
+});
+
+test("mobile 'More' menu reaches every section", async ({ page, isMobile }) => {
+  test.skip(!isMobile, "mobile only");
+  await onboard(page);
+  await page.getByRole("button", { name: "More sections" }).click();
+  for (const l of ["IELTS", "Interview", "Grammar", "Vocabulary", "Progress", "Community", "Settings"]) await expect(page.getByRole("dialog").getByRole("link", { name: l })).toBeVisible();
+  await page.getByRole("dialog").getByRole("link", { name: "Interview" }).click();
+  await expect(page).toHaveURL(/\/interview/);
 });

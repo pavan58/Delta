@@ -37,6 +37,7 @@ export function initialState(): AppState {
     sessions: [],
     mistakes: [],
     challenge: {},
+    foundation: {},
     vocab: {},
     learnedWords: [],
     ielts: [],

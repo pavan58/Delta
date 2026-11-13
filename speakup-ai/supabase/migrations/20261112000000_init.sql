@@ -292,7 +292,7 @@ create table public.app_settings (
   updated_by uuid references auth.users(id) on delete set null,
   updated_at timestamptz not null default now()
 );
-insert into public.app_settings (key, value) values ('global', '{"ai_enabled": true, "ai_daily_limit_guest": 10, "ai_daily_limit_user": 30, "ai_global_daily_limit": 2000, "features": {"speak": true, "grammar": true, "challenge": true, "ielts": true, "interview": true, "vocabulary": true, "community": true}}') on conflict do nothing;
+insert into public.app_settings (key, value) values ('global', '{"ai_enabled": true, "ai_daily_limit_guest": 10, "ai_daily_limit_user": 30, "ai_global_daily_limit": 2000, "features": {"foundation": true, "speak": true, "grammar": true, "challenge": true, "ielts": true, "interview": true, "vocabulary": true, "community": true}}') on conflict do nothing;
 
 create table public.app_feedback (
   id uuid primary key default gen_random_uuid(),

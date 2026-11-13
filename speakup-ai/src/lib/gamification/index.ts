@@ -51,7 +51,7 @@ export interface Achievement {
   title: string;
   description: string;
   emoji: string;
-  group: "streak" | "vocabulary" | "ielts" | "interview" | "challenge" | "speaking";
+  group: "streak" | "vocabulary" | "ielts" | "interview" | "challenge" | "speaking" | "foundation";
   check: (s: AppState) => boolean;
 }
 
@@ -65,6 +65,10 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: "vocab-10", title: "Word Collector", description: "Learn 10 words", emoji: "📘", group: "vocabulary", check: (s) => s.learnedWords.length >= 10 },
   { id: "vocab-50", title: "Word Master", description: "Learn 50 words", emoji: "📚", group: "vocabulary", check: (s) => s.learnedWords.length >= 50 },
   { id: "vocab-100", title: "Lexicon Legend", description: "Learn 100 words", emoji: "🧠", group: "vocabulary", check: (s) => s.learnedWords.length >= 100 },
+  { id: "foundation-first", title: "Back to Basics", description: "Complete your first Foundation Course lesson", emoji: "🌱", group: "foundation", check: (s) => Object.keys(s.foundation ?? {}).length >= 1 },
+  { id: "foundation-verbs", title: "Verb Master", description: "Complete the Verbs unit", emoji: "⚙️", group: "foundation", check: (s) => ["verbs-basics", "verb-to-be", "have-has", "do-does-did", "verb-forms", "modals"].every((id) => s.foundation?.[id]) },
+  { id: "foundation-tenses", title: "Tense Tamer", description: "Complete all Tenses lessons", emoji: "⏳", group: "foundation", check: (s) => ["present-simple", "present-continuous", "present-perfect", "past-simple", "past-continuous", "past-perfect", "future-forms", "future-perfect", "tense-review"].every((id) => s.foundation?.[id]) },
+  { id: "foundation-graduate", title: "Foundation Graduate", description: "Complete the whole Foundation Course", emoji: "🎓", group: "foundation", check: (s) => Object.keys(s.foundation ?? {}).length >= 28 },
   { id: "challenge-week1", title: "Foundation Built", description: "Complete Week 1 of the 30-day challenge", emoji: "🧱", group: "challenge", check: (s) => [1, 2, 3, 4, 5, 6, 7].every((d) => s.challenge[d]) },
   { id: "challenge-week2", title: "No More Hesitation", description: "Complete Week 2 of the challenge", emoji: "🗣️", group: "challenge", check: (s) => [8, 9, 10, 11, 12, 13, 14].every((d) => s.challenge[d]) },
   { id: "challenge-30", title: "Confidence Champion", description: "Complete all 30 challenge days", emoji: "🥇", group: "challenge", check: (s) => Object.keys(s.challenge).length >= 30 },
@@ -93,6 +97,7 @@ export const XP = {
   vocabReview: 2,
   vocabLearned: 5,
   ieltsPractice: 30,
+  foundationLesson: 40,
   mockTest: 120,
   interview: 60,
   mistakeRevised: 5,

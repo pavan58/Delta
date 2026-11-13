@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { fetchAiStatus } from "@/lib/ai/client";
 import {
-  BookOpen, Briefcase, CalendarCheck, Flame, GraduationCap, LayoutDashboard, LineChart, Mic, Settings, Shield, Users, Wand2, Zap,
+  BookOpen, Briefcase, CalendarCheck, Flame, GraduationCap, LayoutDashboard, Library, LineChart, Menu, Mic, Settings, Shield, Users, Wand2, X, Zap,
 } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -16,10 +16,11 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard, mobile: true },
+  { href: "/foundation", label: "Course", icon: Library, mobile: true },
   { href: "/speak", label: "Speak", icon: Mic, mobile: true },
   { href: "/challenge", label: "30-Day", icon: CalendarCheck, mobile: true },
-  { href: "/ielts", label: "IELTS", icon: GraduationCap, mobile: true },
-  { href: "/interview", label: "Interview", icon: Briefcase, mobile: true },
+  { href: "/ielts", label: "IELTS", icon: GraduationCap },
+  { href: "/interview", label: "Interview", icon: Briefcase },
   { href: "/grammar", label: "Grammar", icon: Wand2 },
   { href: "/vocabulary", label: "Vocabulary", icon: BookOpen },
   { href: "/progress", label: "Progress", icon: LineChart },
@@ -38,13 +39,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useCloudSync();
   const streak = currentStreak(activity);
   const [features, setFeatures] = useState<Record<string, boolean>>({});
+  const [moreOpen, setMoreOpen] = useState(false);
+  useEffect(() => setMoreOpen(false), [path]);
   useEffect(() => {
     fetchAiStatus().then((st) => st && setFeatures(st.features ?? {}));
   }, []);
   // Admin can switch modules off (feature flags). Map path prefix -> flag key.
-  const flagOf = (href: string) => ({ "/speak": "speak", "/grammar": "grammar", "/challenge": "challenge", "/ielts": "ielts", "/interview": "interview", "/vocabulary": "vocabulary", "/community": "community" } as Record<string, string>)[href];
+  const flagOf = (href: string) => ({ "/speak": "speak", "/foundation": "foundation", "/grammar": "grammar", "/challenge": "challenge", "/ielts": "ielts", "/interview": "interview", "/vocabulary": "vocabulary", "/community": "community" } as Record<string, string>)[href];
   const enabled = (href: string) => features[flagOf(href) ?? ""] !== false;
-  const currentFlagHref = Object.keys({ "/speak": 1, "/grammar": 1, "/challenge": 1, "/ielts": 1, "/interview": 1, "/vocabulary": 1, "/community": 1 }).find((h) => path === h || path.startsWith(h + "/"));
+  const currentFlagHref = Object.keys({ "/foundation": 1, "/speak": 1, "/grammar": 1, "/challenge": 1, "/ielts": 1, "/interview": 1, "/vocabulary": 1, "/community": 1 }).find((h) => path === h || path.startsWith(h + "/"));
   const blocked = currentFlagHref ? !enabled(currentFlagHref) : false;
 
   useEffect(() => {
@@ -90,12 +93,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <main className="mx-auto w-full max-w-5xl px-4 pb-28 pt-5 md:pb-10">{!hydrated ? <div className="h-40 animate-pulse rounded-2xl surface-2" /> : blocked ? <div className="card p-6">This module is temporarily unavailable. Please try another activity.</div> : children}</main>
       </div>
 
+      {moreOpen && (
+        <div className="fixed inset-0 z-40 md:hidden" role="dialog" aria-modal="true" aria-label="All sections">
+          <button className="absolute inset-0 bg-black/40" aria-label="Close menu" onClick={() => setMoreOpen(false)} />
+          <div className="fade-in absolute inset-x-0 bottom-0 rounded-t-3xl bg-[var(--surface)] p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+            <div className="mb-3 flex items-center justify-between"><p className="font-semibold">All sections</p><button onClick={() => setMoreOpen(false)} className="btn btn-ghost p-2" aria-label="Close"><X size={18} /></button></div>
+            <div className="grid grid-cols-3 gap-2">
+              {nav.map((n) => (
+                <Link key={n.href} href={n.href} className={cn("flex flex-col items-center gap-1 rounded-2xl p-3 text-xs font-medium", active(n.href) ? "bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-200" : "surface-2")}>
+                  <n.icon size={22} /> {n.label}
+                </Link>
+              ))}
+            </div>
+            <div className="mt-3 flex justify-center"><ThemeToggle /></div>
+          </div>
+        </div>
+      )}
+
       <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-base bg-[var(--surface)] pb-[env(safe-area-inset-bottom)] md:hidden" aria-label="Main mobile">
         {NAV.filter((n) => n.mobile && enabled(n.href)).map((n) => (
           <Link key={n.href} href={n.href} className={cn("flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium", active(n.href) ? "text-brand-600 dark:text-brand-300" : "text-muted")}>
             <n.icon size={20} /> {n.label}
           </Link>
         ))}
+        <button onClick={() => setMoreOpen(true)} className={cn("flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium", moreOpen ? "text-brand-600" : "text-muted")} aria-label="More sections" aria-expanded={moreOpen}>
+          <Menu size={20} /> More
+        </button>
       </nav>
     </div>
   );

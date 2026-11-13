@@ -45,6 +45,8 @@ describe("grammar engine", () => {
       "Did they play cricket yesterday?",
       "Yesterday I went home and decided to rest.",
       "I like tea and coffee.",
+      "Ravi and I are friends.",
+      "My wife and I were in Goa last year.",
     ]) {
       const r = analyse(s);
       expect(r.issues, s + " -> " + r.corrected).toHaveLength(0);

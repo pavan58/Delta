@@ -5,9 +5,9 @@ Run everything: `npm run test:all` (typecheck → unit → database RLS → prod
 | Suite | Command | Result (12–13 Nov 2026) |
 |---|---|---|
 | TypeScript | `npm run typecheck` | ✅ no errors |
-| Unit (Vitest) | `npm test` | ✅ 42 / 42 |
+| Unit (Vitest) | `npm test` | ✅ 78 / 78 |
 | Database / RLS (PGlite + Supabase auth stub) | `npm run test:db` | ✅ all assertions |
-| End-to-end (Playwright, desktop + Pixel 7) | `npm run test:e2e` | ✅ 32 / 32 |
+| End-to-end (Playwright, desktop + Pixel 7) | `npm run test:e2e` | ✅ 37 / 37 (+1 mobile-only test skipped on desktop) |
 | Production build | `npm run build` | ✅ |
 
 ## What is covered
@@ -22,7 +22,8 @@ Run everything: `npm run test:all` (typecheck → unit → database RLS → prod
   spaced-repetition intervals, deterministic daily words, progress summary maths.
 - **Database security** — signup trigger, owner-only read/write, no cross-user inserts, no self-promotion to admin,
   public read of *published* content only, admin-only writes, operational tables closed, cascading account deletion.
-- **E2E** — landing sections & CTA, guest onboarding + persistence after reload, grammar coach + mistake tracker,
+- **Foundation course** — all 28 lessons are complete and well-formed (≥4 rule points, Hindi, ≥3 examples, ≥3 common mistakes, ≥6 exercises, speaking drill); every stored answer is accepted by the checker; model corrections pass the grammar engine; contractions accepted, articles stay significant; word-order shuffles are real shuffles.
+- **E2E** — Foundation overview (5 units, 28 lessons), a full lesson Learn → Practise → Speak with saved progress, mobile "More" menu, landing sections & CTA, guest onboarding + persistence after reload, grammar coach + mistake tracker,
   speaking teacher free mode, 30-day challenge completion → streak/XP + WhatsApp link, vocabulary save/flashcard/quiz,
   IELTS reading band, writing four-criteria report, listening map + answer sheet, interview flow to final report,
   progress/community/settings, challenge-a-friend link, AI endpoint graceful fallback & validation, admin APIs reject

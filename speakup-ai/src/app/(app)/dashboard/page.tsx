@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { ArrowRight, BookOpen, Briefcase, CalendarCheck, Clock, Flame, GraduationCap, Mic, Target, TrendingUp, Trophy, Wand2 } from "lucide-react";
+import { ArrowRight, Library, BookOpen, Briefcase, CalendarCheck, Clock, Flame, GraduationCap, Mic, Target, TrendingUp, Trophy, Wand2 } from "lucide-react";
 import { useAppState } from "@/lib/store/store";
 import { latestScores, progressSummary } from "@/lib/scoring/progress";
 import { getLesson } from "@/content/lessons/challenge";
@@ -9,6 +9,7 @@ import { Stat, ScoreRing } from "@/components/ui/Score";
 import { WeeklyActivityChart } from "@/components/charts/Charts";
 import { dueCount } from "@/lib/vocab/srs";
 import { localDate } from "@/lib/utils";
+import { FOUNDATION_LESSONS } from "@/content/foundation";
 
 export default function Dashboard() {
   const s = useAppState();
@@ -21,6 +22,20 @@ export default function Dashboard() {
   const goal = s.profile?.dailyMinutes ?? 15;
   const due = dueCount(s);
   const doneToday = (s.activity[today]?.sessions ?? 0) > 0;
+  const fDone = Object.keys(s.foundation ?? {}).length;
+  const fNext = FOUNDATION_LESSONS.find((l) => !s.foundation?.[l.id]);
+  const isBeginner = s.profile?.level === "beginner" || s.profile?.level === "elementary";
+  const foundationCard = fNext && (
+    <Link href={`/foundation/${fNext.id}`} className="card group flex min-w-0 items-center gap-4 p-4 hover:border-brand-400">
+      <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-mint-500/15 text-mint-500"><Library /></div>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-semibold uppercase tracking-wide text-mint-500">Foundation course · {fDone}/{FOUNDATION_LESSONS.length}</p>
+        <p className="truncate font-semibold">{fDone ? "Continue: " : "Start: "}{fNext.title}</p>
+        <p className="truncate text-sm text-muted">Grammar, verbs, adjectives & all 12 tenses</p>
+      </div>
+      <ArrowRight className="text-muted transition group-hover:translate-x-1" />
+    </Link>
+  );
 
   return (
     <div className="space-y-5">
@@ -45,6 +60,7 @@ export default function Dashboard() {
       </section>
 
       <section className="grid gap-3 sm:grid-cols-2">
+        {isBeginner && foundationCard}
         {next && (
           <Link href={`/challenge/${next.day}`} className="card group flex min-w-0 items-center gap-4 p-4 hover:border-brand-400">
             <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-accent-500/15 text-2xl">{next.badge}</div>
@@ -65,6 +81,7 @@ export default function Dashboard() {
           </div>
           <ArrowRight className="text-muted transition group-hover:translate-x-1" />
         </Link>
+        {!isBeginner && foundationCard}
       </section>
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -84,6 +101,7 @@ export default function Dashboard() {
         </div>
         <div className="card space-y-3 p-4">
           <h2 className="font-semibold">Readiness</h2>
+          <Row icon={<Library size={18} />} label="Foundation course" value={`${fDone}/${FOUNDATION_LESSONS.length} lessons`} />
           <Row icon={<CalendarCheck size={18} />} label="30-day challenge" value={`${p.completedDays.length}/30 days`} />
           <Row icon={<Briefcase size={18} />} label="Interview readiness" value={p.interviewReadiness !== null ? `${p.interviewReadiness}/100` : "Not started"} />
           <Row icon={<GraduationCap size={18} />} label="IELTS estimate" value={p.ieltsEstimate !== null ? `Band ${p.ieltsEstimate.toFixed(1)}${p.ieltsSkillsDone < 4 ? ` (${p.ieltsSkillsDone}/4 skills)` : ""}` : "Not started"} />
@@ -100,8 +118,9 @@ export default function Dashboard() {
 
       <section>
         <h2 className="mb-3 font-semibold">Practise</h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
           {[
+            { href: "/foundation", icon: Library, label: "Course", color: "text-mint-500" },
             { href: "/speak", icon: Mic, label: "Speak", color: "text-brand-500" },
             { href: "/grammar", icon: Wand2, label: "Grammar", color: "text-mint-500" },
             { href: "/challenge", icon: CalendarCheck, label: "30-Day", color: "text-accent-500" },

@@ -81,9 +81,14 @@ export function buildPayload(s: AppState, userId: string) {
       id: m.id, user_id: userId, original: m.original, corrected: m.corrected, category: m.category, reason: m.reason,
       created_at: m.createdAt, revised: m.revised, attempts: m.attempts,
     })),
-    lesson_progress: Object.values(s.challenge).map((c) => ({
-      user_id: userId, lesson_key: `challenge-day-${c.day}`, day: c.day, score: c.score, completed_at: c.completedAt, transcript: c.transcript.slice(0, 5000), details: c.scores,
-    })),
+    lesson_progress: [
+      ...Object.values(s.challenge).map((c) => ({
+        user_id: userId, lesson_key: `challenge-day-${c.day}`, day: c.day, score: c.score, completed_at: c.completedAt, transcript: c.transcript.slice(0, 5000), details: c.scores as unknown,
+      })),
+      ...Object.entries(s.foundation ?? {}).map(([id, f]) => ({
+        user_id: userId, lesson_key: `foundation-${id}`, day: null, score: f.best, completed_at: f.completedAt, transcript: null, details: { attempts: f.attempts, spoke: f.spoke } as unknown,
+      })),
+    ],
     saved_vocabulary: Object.entries(s.vocab).map(([word_id, v]) => ({
       user_id: userId, word_id, box: v.box, due: v.due, correct: v.correct, wrong: v.wrong, saved_at: v.savedAt, learned: s.learnedWords.includes(word_id),
     })),
@@ -179,6 +184,13 @@ export async function pullAndMerge(sb: SupabaseClient, userId: string): Promise<
     id: String(r.id), original: String(r.original), corrected: String(r.corrected), category: r.category as Mistake["category"], reason: String(r.reason ?? ""), createdAt: String(r.created_at), revised: Boolean(r.revised), attempts: Number(r.attempts ?? 0),
   })));
   for (const r of (lessons.data ?? []) as Row[]) {
+    const key = String(r.lesson_key);
+    if (key.startsWith("foundation-")) {
+      const id = key.slice("foundation-".length);
+      const d = (r.details ?? {}) as { attempts?: number; spoke?: boolean };
+      if (!s.foundation?.[id]) s.foundation = { ...(s.foundation ?? {}), [id]: { completedAt: String(r.completed_at), best: Number(r.score), attempts: Number(d.attempts ?? 1), spoke: Boolean(d.spoke) } };
+      continue;
+    }
     const day = Number(r.day);
     if (!s.challenge[day]) s.challenge = { ...s.challenge, [day]: { day, completedAt: String(r.completed_at), score: Number(r.score), transcript: String(r.transcript ?? ""), scores: r.details as never } };
   }

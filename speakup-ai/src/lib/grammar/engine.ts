@@ -322,6 +322,8 @@ function buildRules(): Rule[] {
     re: new RegExp(`\\b(${SUBJECTS}) (am|is|are|was|were)\\b`, "gi"),
     fix: (m, ctx) => {
       if (/^(it|you)$/i.test(m[1]) && baseOf(prevWord(ctx, m.index)) ) return null;
+      // Compound subjects are plural: "Ravi and I are", "my wife and I were".
+      if (prevWord(ctx, m.index) === "and" && /^(are|were)$/i.test(m[2])) return null;
       return beFix(m[1], m[2], ctx);
     },
     message: (orig, rep) => `Use '${rep}' instead of '${orig}'.`,

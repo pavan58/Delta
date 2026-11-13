@@ -4,6 +4,7 @@
 simulator for Indian learners. Mobile-first PWA built with Next.js, TypeScript, Tailwind, Recharts and (optionally)
 Supabase and any AI provider.
 
+- 📘 Spoken English Foundation Course: 28 lessons — sentence structure, nouns, pronouns, articles, verbs (be/have/do, V1–V5, modals), adjectives, adverbs, all 12 tenses, prepositions, questions, negatives, passive, conditionals — each with Hindi explanation, examples, common mistakes, 6 exercises and a speaking drill
 - 🎙️ AI English Speaking Teacher (voice or text, corrections, Hindi explanations, follow-ups, TTS replay & slow mode)
 - ✍️ Grammar & pronunciation coach with a personal mistake tracker
 - 📅 30-Day English Confidence Challenge with scores, badges and a before/after report
@@ -41,7 +42,7 @@ src/lib/ai         provider adapter (Anthropic SDK, OpenAI-compatible, Gemini, O
 src/lib/speech     Web Speech API recognition & synthesis hooks
 src/lib/store      local-first store (guest mode) + actions
 src/lib/supabase   browser/server clients, auth context, cloud sync
-src/content        original lessons, vocabulary, IELTS tests & prompts, interview bank
+src/content        original foundation course, 30-day lessons, vocabulary, IELTS tests & prompts, interview bank
 supabase/migrations  Postgres schema with RLS
 ```
 

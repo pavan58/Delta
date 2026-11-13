@@ -1,12 +1,13 @@
 import Link from "next/link";
 import {
   ArrowRight, BookOpen, Briefcase, CalendarCheck, Check, ChevronDown, GraduationCap, LineChart, Mic, Share2,
-  ShieldCheck, Sparkles, Trophy, Volume2, Wand2,
+  Library, ShieldCheck, Sparkles, Trophy, Volume2, Wand2,
 } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 const FEATURES = [
+  { icon: Library, title: "Spoken English Foundation", text: "28 step-by-step lessons: sentence structure, verbs, adjectives, all 12 tenses — with Hindi help." },
   { icon: Mic, title: "AI Speaking Teacher", text: "Talk by voice or text. Get instant, friendly corrections and a follow-up question every time." },
   { icon: Wand2, title: "Grammar Coach", text: "See the original, the correct sentence, why it was wrong, and a more professional version." },
   { icon: CalendarCheck, title: "30-Day Confidence Challenge", text: "A guided daily program from self-introductions to a final mock interview." },
@@ -89,7 +90,7 @@ export default function Landing() {
       {/* Features */}
       <section id="features" className="mx-auto max-w-6xl px-4 py-16">
         <SectionTitle eyebrow="Everything in one app" title="Your complete English-speaking toolkit" />
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((f) => (
             <div key={f.title} className="card p-5">
               <div className="mb-4 grid h-11 w-11 place-items-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-900/40 dark:text-brand-300"><f.icon size={22} /></div>
@@ -203,7 +204,7 @@ export default function Landing() {
               <p className="mt-2 text-4xl font-extrabold">₹0</p>
               <p className="text-sm text-muted">Forever, for core learning</p>
               <ul className="mt-5 space-y-2 text-sm">
-                {["Daily English practice (voice & text)", "Rule-based grammar correction", "30-day challenge & daily speaking score", "IELTS practice in all four skills", "Interview question bank & simulator", "Vocabulary, streaks, badges & progress"].map((x) => (
+                {["Spoken English Foundation Course (28 lessons)", "Daily English practice (voice & text)", "Rule-based grammar correction", "30-day challenge & daily speaking score", "IELTS practice in all four skills", "Interview question bank & simulator", "Vocabulary, streaks, badges & progress"].map((x) => (
                   <li key={x} className="flex gap-2"><Check size={18} className="shrink-0 text-mint-500" /> {x}</li>
                 ))}
               </ul>
