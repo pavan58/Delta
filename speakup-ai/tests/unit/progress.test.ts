@@ -65,3 +65,48 @@ describe("spaced repetition", () => {
     expect(dailyWords(all, 5, "2026-11-12")).not.toEqual(dailyWords(all, 5, "2026-11-13"));
   });
 });
+
+import { ensureDailyPlan, markLearned, pickDailyIds } from "@/lib/vocab/daily";
+import { DAILY_WORDS, DAILY_CATEGORIES } from "@/content/vocabulary/daily-needs";
+describe("daily needs vocabulary", () => {
+  it("has a large bank across topics with unique ids, Hindi and examples", () => {
+    expect(DAILY_WORDS.length).toBeGreaterThanOrEqual(550);
+    expect(new Set(DAILY_WORDS.map((w) => w.id)).size).toBe(DAILY_WORDS.length);
+    for (const c of ["animals", "fruits", "plants", "vegetables", "flowers", "birds"]) expect(DAILY_WORDS.filter((w) => w.category === c).length).toBeGreaterThanOrEqual(15);
+    for (const w of DAILY_WORDS) {
+      expect(w.hi, w.word).toMatch(/[ऀ-ॿ]/);
+      expect(w.example, w.word).toMatch(/^[A-Z].*[.?!]$/);
+      expect(w.example.toLowerCase(), w.word).toContain(w.word.toLowerCase());
+    }
+    expect(DAILY_CATEGORIES.length).toBeGreaterThanOrEqual(20);
+  });
+  it("picks 50 new words a day, mixed across topics, never repeating learned words", () => {
+    const ids = pickDailyIds(new Set(), 50, [], "2026-11-13");
+    expect(ids).toHaveLength(50);
+    expect(new Set(ids.map((id) => id.split("-")[1])).size).toBeGreaterThanOrEqual(20);
+    const next = pickDailyIds(new Set(ids), 50, [], "2026-11-14");
+    expect(next.some((id) => ids.includes(id))).toBe(false);
+  });
+  it("respects chosen topics", () => {
+    const ids = pickDailyIds(new Set(), 50, ["animals", "fruits", "plants"], "2026-11-13");
+    expect(ids).toHaveLength(50);
+    expect(ids.every((id) => /^dn-(animals|fruits|plants)-/.test(id))).toBe(true);
+  });
+  it("marks words learned with a spaced review card, and keeps learned words when the goal changes", () => {
+    let s = initialState();
+    s.dailyWords = ensureDailyPlan(s, "2026-11-13");
+    expect(s.dailyWords!.ids).toHaveLength(50);
+    const first = s.dailyWords!.ids[0];
+    s = markLearned(s, first, "2026-11-13");
+    expect(s.learnedWords).toContain(first);
+    expect(s.vocab[first].due).toBe("2026-11-14");
+    s.settings = { ...s.settings, dailyGoal: 10 };
+    const plan = ensureDailyPlan(s, "2026-11-13")!;
+    expect(plan.ids).toHaveLength(10);
+    expect(plan.ids).toContain(first);
+    // New day → new words, previous learned excluded.
+    const tomorrow = ensureDailyPlan(s, "2026-11-14")!;
+    expect(tomorrow.ids).not.toContain(first);
+    expect(tomorrow.learned).toHaveLength(0);
+  });
+});

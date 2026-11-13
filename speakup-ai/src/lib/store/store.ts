@@ -24,6 +24,8 @@ export const DEFAULT_SETTINGS: Settings = {
   keepRecordings: false,
   leaderboardOptIn: false,
   displayName: "",
+  dailyGoal: 50,
+  dailyCategories: [],
 };
 
 export function initialState(): AppState {
@@ -38,6 +40,7 @@ export function initialState(): AppState {
     mistakes: [],
     challenge: {},
     foundation: {},
+    dailyWords: null,
     vocab: {},
     learnedWords: [],
     ielts: [],

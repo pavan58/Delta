@@ -10,7 +10,7 @@ Supabase and any AI provider.
 - 📅 30-Day English Confidence Challenge with scores, badges and a before/after report
 - 🎓 IELTS Academic & General: Listening, Reading, Writing, Speaking, full mock test (band **estimates**)
 - 💼 Interview simulator: 12 categories (HR, Fresher, Desktop Support, Helpdesk, AWS, Azure, Mainframe, …) scored /100
-- 📚 Vocabulary builder with spaced repetition; 📈 progress dashboard; 🔥 streaks, XP, badges, leaderboard
+- 📚 Daily Needs Vocabulary: a daily target of 50 new picture words (586 words in 23 topics: animals, birds, insects, fruits, vegetables, plants, flowers, body, family, home, kitchen, clothes, food, transport, places, jobs, feelings, daily actions…) with Hindi, audio and examples; plus professional/interview/IELTS word lists with spaced repetition; 📈 progress dashboard; 🔥 streaks, XP, badges, leaderboard
 - 📲 WhatsApp / native share cards (PNG), challenge-a-friend and referral links
 - 🛡️ Admin panel, Supabase RLS, privacy controls, data export & account deletion
 

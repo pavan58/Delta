@@ -88,7 +88,7 @@ export default function Dashboard() {
         <Stat label="Current streak" value={`${p.streak} days`} sub={`Best: ${p.longest} days`} icon={<Flame size={18} className="text-accent-500" />} />
         <Stat label="Speaking minutes" value={p.totalMinutes} sub="Total practice time" icon={<Clock size={18} />} />
         <Stat label="Weekly average" value={p.weeklyAverage ?? "—"} sub={p.previousScore !== null ? `Previous day: ${p.previousScore}` : "Score / 100 (est.)"} icon={<TrendingUp size={18} />} />
-        <Stat label="Words learned" value={p.vocabLearned} sub={due ? `${due} due for review` : "Vocabulary builder"} icon={<BookOpen size={18} />} />
+        <Link href="/vocabulary" className="block"><Stat label="Daily words" value={`${s.dailyWords?.date === today ? s.dailyWords.learned.length : 0}/${s.settings.dailyGoal}`} sub={`${p.vocabLearned} learned in total${due ? ` · ${due} to review` : ""}`} icon={<BookOpen size={18} />} /></Link>
       </section>
 
       <section className="grid gap-3 lg:grid-cols-3">
@@ -126,7 +126,7 @@ export default function Dashboard() {
             { href: "/challenge", icon: CalendarCheck, label: "30-Day", color: "text-accent-500" },
             { href: "/ielts", icon: GraduationCap, label: "IELTS", color: "text-brand-500" },
             { href: "/interview", icon: Briefcase, label: "Interview", color: "text-accent-500" },
-            { href: "/vocabulary", icon: BookOpen, label: due ? `Review (${due})` : "Vocabulary", color: "text-mint-500" },
+            { href: "/vocabulary", icon: BookOpen, label: `Daily ${s.settings.dailyGoal} words`, color: "text-mint-500" },
           ].map((x) => (
             <Link key={x.href} href={x.href} className="card flex flex-col items-center gap-2 p-4 text-center text-sm font-semibold hover:border-brand-400">
               <x.icon className={x.color} /> {x.label}

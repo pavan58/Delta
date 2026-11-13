@@ -35,6 +35,10 @@ export interface Settings {
   keepRecordings: boolean;
   leaderboardOptIn: boolean;
   displayName: string;
+  /** Daily Needs vocabulary target (new words per day). */
+  dailyGoal: number;
+  /** Selected Daily Needs topics; empty = all topics. */
+  dailyCategories: string[];
 }
 
 export interface ScoreBreakdown {
@@ -165,6 +169,7 @@ export interface AppState {
   mistakes: Mistake[];
   challenge: Record<number, ChallengeDay>;
   foundation: Record<string, FoundationProgress>;
+  dailyWords: { date: string; ids: string[]; learned: string[] } | null;
   vocab: Record<string, VocabCard>;
   learnedWords: string[];
   ielts: IeltsAttempt[];

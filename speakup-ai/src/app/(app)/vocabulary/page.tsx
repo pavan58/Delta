@@ -9,29 +9,45 @@ import { dailyWords, dueIds, LEARNED_BOX, newCard, review } from "@/lib/vocab/sr
 import { XP } from "@/lib/gamification";
 import { useCustomContent } from "@/lib/content/custom";
 import { cn } from "@/lib/utils";
+import { DailyWords } from "@/components/vocab/DailyWords";
+import { DAILY_WORDS, DAILY_CATEGORY_BY_ID } from "@/content/vocabulary/daily-needs";
+import { CalendarDays } from "lucide-react";
 
-type Tab = "browse" | "review" | "quiz" | "saved";
+/** Daily Needs words in the shared Word shape, so flashcard review and Saved work for them too. */
+const DAILY_AS_WORDS: Word[] = DAILY_WORDS.map((w) => ({
+  id: w.id, word: w.word, category: "daily", meaning: `${w.emoji} ${w.hi}`, pron: "", example: w.example,
+  synonyms: [], antonyms: [], usage: `Daily needs · ${DAILY_CATEGORY_BY_ID.get(w.category)?.label ?? ""}`, hi: w.hi,
+}));
+
+type Tab = "daily" | "browse" | "review" | "quiz" | "saved";
 
 export default function VocabularyPage() {
   const vocab = useAppState((s) => s.vocab);
   const due = dueIds({ vocab }).length;
-  const [tab, setTab] = useState<Tab>("browse");
+  const [tab, setTab] = useState<Tab>("daily");
   const custom = useCustomContent().vocabulary;
   const all = useMemo(() => [...WORDS, ...custom], [custom]);
+  const withDaily = useMemo(() => [...all, ...DAILY_AS_WORDS], [all]);
+  const today = useAppState((s) => s.dailyWords);
   return (
     <div>
-      <PageHeader title="Vocabulary Builder" subtitle="Learn words in context, then lock them in with spaced repetition." />
+      <PageHeader title="Vocabulary Builder" subtitle="Daily needs words (animals, fruits, plants and more) plus professional, interview and IELTS vocabulary — locked in with spaced repetition." />
       <div className="mb-4 flex flex-wrap gap-2" role="tablist">
-        {([["browse", "Browse", Search], ["review", `Flashcards${due ? ` (${due} due)` : ""}`, Layers], ["quiz", "Daily quiz", Brain], ["saved", `Saved (${Object.keys(vocab).length})`, Bookmark]] as const).map(([v, l, Icon]) => (
+        {([["daily", `Daily ${s_goalLabel(today)}`, CalendarDays], ["browse", "Word lists", Search], ["review", `Flashcards${due ? ` (${due} due)` : ""}`, Layers], ["quiz", "Daily quiz", Brain], ["saved", `Saved (${Object.keys(vocab).length})`, Bookmark]] as const).map(([v, l, Icon]) => (
           <button key={v} role="tab" aria-selected={tab === v} onClick={() => setTab(v)} className={cn("btn btn-secondary py-2 text-sm", tab === v && "border-brand-500 ring-2 ring-brand-500/30")}><Icon size={16} /> {l}</button>
         ))}
       </div>
+      {tab === "daily" && <DailyWords />}
       {tab === "browse" && <Browse all={all} />}
-      {tab === "review" && <Review all={all} />}
+      {tab === "review" && <Review all={withDaily} />}
       {tab === "quiz" && <Quiz all={all} />}
-      {tab === "saved" && <Saved all={all} />}
+      {tab === "saved" && <Saved all={withDaily} />}
     </div>
   );
+}
+
+function s_goalLabel(plan: { date: string; ids: string[]; learned: string[] } | null) {
+  return plan ? `words (${plan.learned.length}/${plan.ids.length})` : "words";
 }
 
 function useWordMap(all: Word[]) {

@@ -7,6 +7,7 @@ Everything below runs at ₹0 with no keys:
 - Landing page, guest onboarding, dashboard, progress charts, streaks, XP, badges, PNG share cards, WhatsApp links.
 - AI English Speaking Teacher in **rule-based** mode (corrections, explanations in English/Hindi, follow-up questions,
   text-to-speech with replay and slow mode, browser speech recognition).
+- Daily Needs Vocabulary (50 new words/day target, 586 picture words with Hindi).
 - Grammar coach + personal mistake tracker; vocabulary builder with spaced repetition and quizzes.
 - 30-day challenge with scores, badges and before/after report.
 - IELTS Listening (synthetic audio), Reading, Writing (criteria-based estimate), Speaking, full mock test.
@@ -52,6 +53,7 @@ list price at the time of writing). Check current prices; the admin panel shows 
 - **IELTS bands are estimates.** Practice tests are shorter than real ones (raw scores scaled to /40); writing bands
   come from measurable indicators (length, paragraphing, linking, lexical diversity, error rate), not an examiner.
   Synthetic listening audio is not the same as official recordings.
+- The Daily Needs bank has 586 words — about 12 days at 50/day. After that, learners keep reviewing; admins can add more words (the bank should grow to 1,500+ for a full 30 days at 50/day).
 - Guest data lives in browser storage and can be lost if cleared.
 - One listening test, two reading tests and 13 writing prompts ship today; admins can add speaking/interview/vocabulary
   content without code. More full tests should be authored before a large launch.

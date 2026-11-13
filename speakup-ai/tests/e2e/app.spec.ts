@@ -74,6 +74,7 @@ test("30-day challenge day 1 can be completed and updates streak & XP", async ({
 test("vocabulary: save word, flashcard review and quiz", async ({ page }) => {
   await onboard(page);
   await page.goto("/vocabulary");
+  await page.getByRole("tab", { name: "Word lists" }).click();
   await page.getByRole("button", { name: "Save word" }).first().click();
   await page.getByRole("tab", { name: /Flashcards/ }).click();
   await page.getByRole("button", { name: "Flip card" }).click();
@@ -233,4 +234,50 @@ test("mobile 'More' menu reaches every section", async ({ page, isMobile }) => {
   for (const l of ["IELTS", "Interview", "Grammar", "Vocabulary", "Progress", "Community", "Settings"]) await expect(page.getByRole("dialog").getByRole("link", { name: l })).toBeVisible();
   await page.getByRole("dialog").getByRole("link", { name: "Interview" }).click();
   await expect(page).toHaveURL(/\/interview/);
+});
+
+test("daily needs vocabulary: 50-word goal, study 10 picture words, pass the quick test", async ({ page }) => {
+  await onboard(page);
+  await page.goto("/vocabulary");
+  await expect(page.getByText("Learn 50 new everyday words today")).toBeVisible();
+  for (const t of ["Animals", "Fruits", "Plants & trees"]) await expect(page.getByRole("button", { name: new RegExp(t) }).first()).toBeVisible();
+  await page.getByRole("button", { name: /Start 10 words/ }).click();
+  // Read the 10 study cards (word + Hindi).
+  const cards = page.locator(".card:has(p.font-bold.break-words)");
+  await expect(cards).toHaveCount(10);
+  const pairs: Array<[string, string]> = [];
+  for (let i = 0; i < 10; i++) pairs.push([(await cards.nth(i).locator("p.font-bold").textContent())!.trim(), (await cards.nth(i).locator("p[lang=hi]").textContent())!.trim()]);
+  await page.getByRole("button", { name: /test me/ }).click();
+  for (let i = 0; i < 25; i++) {
+    if (await page.getByText(/words learned$/).count()) break;
+    const isPic = await page.getByText("Which word is this?").count();
+    let answer: string;
+    if (isPic) {
+      const hi = (await page.locator(".card p.text-lg[lang=hi]").textContent())!.trim();
+      answer = pairs.find((p) => p[1] === hi)![0];
+    } else {
+      const word = (await page.locator(".card p.text-3xl").textContent())!.trim();
+      answer = pairs.find((p) => p[0] === word)![1];
+    }
+    await page.getByRole("radio", { name: answer, exact: true }).click();
+    await page.getByRole("button", { name: "Next" }).click();
+  }
+  await expect(page.getByText("10/10 words learned")).toBeVisible();
+  await page.getByRole("button", { name: /Continue/ }).click();
+  await expect(page.getByRole("img", { name: /10 out of 50/ })).toBeVisible();
+  await page.getByRole("tab", { name: /Flashcards/ }).click();
+  await expect(page.getByText(/All caught up|No cards are due/).first()).toBeVisible();
+});
+
+test("daily needs vocabulary: choose topics and change the goal", async ({ page }) => {
+  await onboard(page);
+  await page.goto("/vocabulary");
+  await page.getByLabel("Daily word goal").selectOption("20");
+  await expect(page.getByText("Learn 20 new everyday words today")).toBeVisible();
+  await page.getByRole("button", { name: /🐘 Animals/ }).first().click();
+  await page.getByRole("button", { name: /🍎 Fruits/ }).first().click();
+  await expect(page.getByText("Only selected topics are used.")).toBeVisible();
+  await expect(page.getByText(/Today's words \(0\/20\)/)).toBeVisible();
+  await page.getByRole("button", { name: /Animals.*learned/ }).click();
+  await expect(page.getByText(/🐘 Animals · 0\/35/)).toBeVisible();
 });
