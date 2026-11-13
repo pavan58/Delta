@@ -5,7 +5,7 @@ Run everything: `npm run test:all` (typecheck → unit → database RLS → prod
 | Suite | Command | Result (12–13 Nov 2026) |
 |---|---|---|
 | TypeScript | `npm run typecheck` | ✅ no errors |
-| Unit (Vitest) | `npm test` | ✅ 39 / 39 |
+| Unit (Vitest) | `npm test` | ✅ 42 / 42 |
 | Database / RLS (PGlite + Supabase auth stub) | `npm run test:db` | ✅ all assertions |
 | End-to-end (Playwright, desktop + Pixel 7) | `npm run test:e2e` | ✅ 32 / 32 |
 | Production build | `npm run build` | ✅ |

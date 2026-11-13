@@ -26,6 +26,8 @@ describe("grammar engine", () => {
     ["I bought an car.", "I bought a car."],
     ["Tomorrow I go to Mumbai.", "Tomorrow I will go to Mumbai."],
     ["They is happy.", "They are happy."],
+    ["Yesterday I go to office and discuss about the project.", "Yesterday I went to the office and discussed the project."],
+    ["Last week we visited Pune and meet my uncle.", "Last week we visited Pune and met my uncle."],
   ])("%s", (input, expected) => {
     expect(fix(input)).toBe(expected);
   });
@@ -41,10 +43,17 @@ describe("grammar engine", () => {
       "I saw it happen.",
       "He has an HR interview today.",
       "Did they play cricket yesterday?",
+      "Yesterday I went home and decided to rest.",
+      "I like tea and coffee.",
     ]) {
       const r = analyse(s);
       expect(r.issues, s + " -> " + r.corrected).toHaveLength(0);
     }
+  });
+
+  it("scores accuracy proportionally", () => {
+    expect(analyse("Yesterday I go to office and discuss about the project.").score).toBeGreaterThan(20);
+    expect(analyse("Yesterday I went to the office and discussed the project.").score).toBe(100);
   });
 
   it("counts fillers in voice mode", () => {

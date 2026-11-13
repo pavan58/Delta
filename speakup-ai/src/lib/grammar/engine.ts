@@ -368,6 +368,26 @@ function buildRules(): Rule[] {
     hi: "समय (past/future) और subject (he/she = verb+s) के अनुसार verb बदलिए।",
   });
 
+  // Coordinated verb in a past-tense sentence: "Yesterday I went there and meet him" -> "and met him".
+  rules.push({
+    id: "past-and",
+    category: "tense",
+    re: /\b(and|then) (\w+)\b/gi,
+    fix: (m, ctx) => {
+      if (!ctx.past) return null;
+      const w = m[2].toLowerCase();
+      if (!isBase(w) && !isThird(w)) return null;
+      // Only when the clause before already has a past-tense verb.
+      const before = ctx.sentence.slice(0, m.index).toLowerCase().match(/[a-z']+/g) ?? [];
+      if (!before.some((x) => isPastSimple(x))) return null;
+      const b = baseOf(w);
+      if (!b || b === "be") return null;
+      return `${m[1]} ${forms(b).past}`;
+    },
+    message: (_o, rep) => `Keep the same tense in both parts of the sentence: '${rep}'.`,
+    hi: "वाक्य के दोनों हिस्सों में एक ही tense (past) रखें।",
+  });
+
   // Question word order: "Where you are going?" -> "Where are you going?"
   rules.push({
     id: "question-order",
@@ -613,7 +633,8 @@ export function analyse(input: string, opts: AnalyseOptions = {}): GrammarReport
   };
   const weighted = issues.reduce((sum, i) => sum + weight[i.category], 0);
   const per100 = words.length ? (weighted / words.length) * 100 : 0;
-  const score = words.length === 0 ? 0 : Math.max(0, Math.min(100, Math.round(100 - per100 * 6)));
+  // Smooth decay: 1 error in 20 words ≈ 85, 2 in 30 ≈ 80, 4 in 10 ≈ 31. Never negative.
+  const score = words.length === 0 ? 0 : Math.round(100 * Math.exp(-per100 / 30));
 
   const practice: string[] = [];
   const ordered = Object.entries(categories).sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0));
