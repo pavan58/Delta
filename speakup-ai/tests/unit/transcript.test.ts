@@ -52,3 +52,19 @@ describe("speech transcript merging", () => {
     expect(r.confidences).toEqual([0.8, 0.6]);
   });
 });
+
+import { chunkForSpeech } from "@/lib/speech/useSpeechSynthesis";
+import { toSpoken } from "@/components/voice/VoiceCoach";
+describe("voice coach speech", () => {
+  it("speaks corrections naturally and skips Hindi script", () => {
+    const written = 'Good attempt!\nCorrect sentence: "Yesterday I went to the office."\nWhy? Use \'went\' here.\n\'Yesterday\' के साथ past\nWhat did you do next?';
+    expect(toSpoken(written)).toBe("Good attempt! The correct sentence is: Yesterday I went to the office. Use 'went' here. What did you do next?");
+  });
+  it("splits long messages into sentence chunks under ~160 characters", () => {
+    const text = Array(12).fill("This is a fairly long sentence for the coach to read aloud.").join(" ");
+    const chunks = chunkForSpeech(text);
+    expect(chunks.length).toBeGreaterThan(2);
+    expect(chunks.every((c) => c.length <= 200)).toBe(true);
+    expect(chunks.join(" ")).toBe(text);
+  });
+});

@@ -76,8 +76,8 @@ export default function Dashboard() {
           <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-brand-500/15 text-brand-500"><Mic /></div>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold uppercase tracking-wide text-brand-500">Free conversation</p>
-            <p className="font-semibold">Talk with your English teacher</p>
-            <p className="truncate text-sm text-muted">Voice or text · instant corrections</p>
+            <p className="font-semibold">Talk with your voice coach</p>
+            <p className="truncate text-sm text-muted">Hands-free conversation · spoken corrections</p>
           </div>
           <ArrowRight className="text-muted transition group-hover:translate-x-1" />
         </Link>

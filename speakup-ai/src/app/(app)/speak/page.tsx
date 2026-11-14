@@ -12,6 +12,8 @@ import { updateSettings, useAppState } from "@/lib/store/store";
 import { useSpeechSynthesis } from "@/lib/speech/useSpeechSynthesis";
 import type { GrammarReport } from "@/lib/grammar/engine";
 import { cn } from "@/lib/utils";
+import { VoiceCoach } from "@/components/voice/VoiceCoach";
+import { Headphones, MessageSquare } from "lucide-react";
 
 interface Msg {
   role: "teacher" | "learner";
@@ -29,6 +31,20 @@ const MODES: Array<{ v: TeachingMode; label: string; hint: string }> = [
 ];
 
 export default function SpeakPage() {
+  const [view, setView] = useState<"voice" | "chat">("voice");
+  return (
+    <div>
+      <PageHeader title="AI English Speaking Coach" subtitle="Have a real spoken conversation, or chat by typing. Get corrections, explanations and a follow-up question every time." />
+      <div className="mb-4 grid grid-cols-2 gap-2 sm:inline-grid" role="tablist">
+        <button role="tab" aria-selected={view === "voice"} onClick={() => setView("voice")} className={cn("btn btn-secondary text-sm", view === "voice" && "border-brand-500 bg-brand-500 text-white hover:border-brand-500")}><Headphones size={16} /> Voice coach (hands-free)</button>
+        <button role="tab" aria-selected={view === "chat"} onClick={() => setView("chat")} className={cn("btn btn-secondary text-sm", view === "chat" && "border-brand-500 bg-brand-500 text-white hover:border-brand-500")}><MessageSquare size={16} /> Chat &amp; type</button>
+      </div>
+      {view === "voice" ? <VoiceCoach /> : <ChatTeacher />}
+    </div>
+  );
+}
+
+function ChatTeacher() {
   const profile = useAppState((s) => s.profile);
   const settings = useAppState((s) => s.settings);
   const [mode, setMode] = useState<TeachingMode>(levelToMode(profile?.level));
@@ -92,11 +108,11 @@ export default function SpeakPage() {
 
   return (
     <div>
-      <PageHeader title="AI English Speaking Teacher" subtitle="Speak or type. Get corrections, explanations and a follow-up question.">
+      <div className="mb-3">
         <span className={cn("chip", useAi ? "text-brand-500" : "")} title={useAi ? "AI provider enabled" : "Free rule-based coach"}>
           {useAi ? <><Sparkles size={14} /> AI mode</> : <><Bot size={14} /> Free coach (rule-based)</>}
         </span>
-      </PageHeader>
+      </div>
 
       <div className="mb-4 flex flex-wrap gap-2" role="group" aria-label="Teaching mode">
         {MODES.map((m) => (

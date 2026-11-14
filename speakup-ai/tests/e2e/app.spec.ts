@@ -50,6 +50,7 @@ test("grammar coach corrects a sentence and tracks the mistake", async ({ page }
 test("speaking teacher replies in free mode with correction and score", async ({ page }) => {
   await onboard(page);
   await page.goto("/speak");
+  await page.getByRole("tab", { name: /Chat & type/ }).click();
   await typeMode(page);
   await page.getByLabel("Your answer").fill("Yesterday I go to office and work on tickets.");
   await page.getByRole("button", { name: "Send" }).click();
@@ -323,4 +324,58 @@ test("voice input: Android-style cumulative results do not repeat the sentence, 
   expect(await page.evaluate(() => (window as unknown as { __cancelled: number }).__cancelled)).toBeGreaterThan(cancelledBefore);
   await page.getByRole("button", { name: /Check grammar/ }).click();
   await expect(page.getByText("Yesterday I went to the office.").first()).toBeVisible();
+});
+
+test("voice coach: hands-free conversation — coach speaks, listens, corrects, asks again", async ({ page }) => {
+  await page.addInitScript(() => {
+    const w = window as unknown as Record<string, unknown>;
+    const spoken: string[] = [];
+    w.__spoken = spoken;
+    // Instant fake text-to-speech.
+    const fakeSynth = {
+      speak(u: SpeechSynthesisUtterance) { spoken.push(u.text); setTimeout(() => { u.onstart?.(new Event("start") as SpeechSynthesisEvent); setTimeout(() => u.onend?.(new Event("end") as SpeechSynthesisEvent), 20); }, 10); },
+      cancel() {}, pause() {}, resume() {}, getVoices: () => [], addEventListener() {}, removeEventListener() {}, speaking: false, pending: false, paused: false,
+    };
+    Object.defineProperty(window, "speechSynthesis", { value: fakeSynth, configurable: true });
+    // Fake recogniser: each listening turn hears the next answer, then silence.
+    const answers = ["yesterday I go to office", "I like cricket because it is exciting"];
+    let calls = 0;
+    w.__recStarts = 0;
+    class FakeRec {
+      lang = ""; continuous = false; interimResults = false; maxAlternatives = 1;
+      onresult: ((e: unknown) => void) | null = null; onerror: ((e: unknown) => void) | null = null; onend: (() => void) | null = null; onstart: (() => void) | null = null;
+      start() {
+        (w.__recStarts as number)++;
+        const text = answers[calls++] ?? "";
+        setTimeout(() => this.onstart?.(), 10);
+        if (text) setTimeout(() => {
+          const res = Object.assign([{ transcript: text, confidence: 0.9 }], { isFinal: true, length: 1 });
+          this.onresult?.({ resultIndex: 0, results: Object.assign([res], { length: 1 }) });
+        }, 80);
+      }
+      stop() { setTimeout(() => this.onend?.(), 10); }
+      abort() { this.stop(); }
+    }
+    w.webkitSpeechRecognition = FakeRec;
+    w.SpeechRecognition = FakeRec;
+  });
+  await onboard(page);
+  await page.goto("/speak");
+  await expect(page.getByRole("tab", { name: /Voice coach/ })).toHaveAttribute("aria-selected", "true");
+  await page.getByRole("button", { name: /Short pauses/ }).click();
+  await page.getByRole("button", { name: "Start conversation" }).click();
+  // Coach greeted and asked a question out loud, then started listening by itself.
+  await expect(page.getByText(/I'm your English coach/)).toBeVisible();
+  // First answer is heard, the pause ends the turn, and the coach corrects it out loud.
+  await expect(page.getByText("yesterday I go to office")).toBeVisible({ timeout: 10000 });
+  await expect(page.getByText(/Correct sentence: "Yesterday I went to the office\."/)).toBeVisible({ timeout: 10000 });
+  // Second turn happens hands-free.
+  await expect(page.getByText(/Score \d+\/100/)).toHaveCount(2, { timeout: 10000 });
+  const spoken = await page.evaluate(() => (window as unknown as { __spoken: string[] }).__spoken.join(" | "));
+  expect(spoken).toContain("The correct sentence is: Yesterday I went to the office.");
+  expect(spoken).not.toMatch(/[\u0900-\u097F]/);
+  expect(await page.evaluate(() => (window as unknown as { __recStarts: number }).__recStarts)).toBeGreaterThanOrEqual(2);
+  await page.getByRole("button", { name: "End" }).click();
+  await expect(page.getByText("Great conversation!")).toBeVisible();
+  await expect(page.getByText(/2 answers/)).toBeVisible();
 });

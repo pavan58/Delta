@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { collapseRepeats, joinWithOverlap, mergeSession } from "./transcript";
+import { cancelSpeech } from "./useSpeechSynthesis";
 
 /* Minimal typings for the Web Speech API (not in lib.dom for all TS versions). */
 interface SRAlternative { transcript: string; confidence: number }
@@ -96,7 +97,7 @@ export function useSpeechRecognition(lang = "en-IN") {
       }
       sessionRef.current = { final: "", confidences: [] };
       // Stop the teacher's voice first, otherwise the microphone transcribes it as if you said it.
-      if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
+      cancelSpeech();
       setError("");
       const rec = new Ctor();
       rec.lang = lang;
