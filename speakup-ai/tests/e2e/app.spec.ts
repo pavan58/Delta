@@ -281,3 +281,46 @@ test("daily needs vocabulary: choose topics and change the goal", async ({ page 
   await page.getByRole("button", { name: /Animals.*learned/ }).click();
   await expect(page.getByText(/🐘 Animals · 0\/35/)).toBeVisible();
 });
+
+test("voice input: Android-style cumulative results do not repeat the sentence, and the teacher's voice stops when the mic starts", async ({ page }) => {
+  await page.addInitScript(() => {
+    // Fake SpeechRecognition that behaves like Chrome on Android: cumulative + duplicated finals.
+    const steps = [
+      [{ t: "yesterday I go", f: false }],
+      [{ t: "yesterday I go", f: true }],
+      [{ t: "yesterday I go", f: true }, { t: "yesterday I go to office", f: true }],
+      [{ t: "yesterday I go", f: true }, { t: "yesterday I go to office", f: true }, { t: "yesterday I go to office", f: true }],
+    ];
+    (window as unknown as { __cancelled: number }).__cancelled = 0;
+    const realCancel = window.speechSynthesis?.cancel.bind(window.speechSynthesis);
+    if (window.speechSynthesis) window.speechSynthesis.cancel = () => { (window as unknown as { __cancelled: number }).__cancelled++; realCancel?.(); };
+    class FakeRec {
+      lang = ""; continuous = false; interimResults = false; maxAlternatives = 1;
+      onresult: ((e: unknown) => void) | null = null; onerror: ((e: unknown) => void) | null = null; onend: (() => void) | null = null; onstart: (() => void) | null = null;
+      private stopped = false;
+      start() {
+        setTimeout(() => this.onstart?.(), 10);
+        steps.forEach((s, i) => setTimeout(() => {
+          if (this.stopped) return;
+          const results = s.map((r) => Object.assign([{ transcript: r.t, confidence: 0.9 }], { isFinal: r.f, length: 1 }));
+          this.onresult?.({ resultIndex: 0, results: Object.assign(results, { length: results.length }) });
+        }, 60 * (i + 1)));
+      }
+      stop() { this.stopped = true; setTimeout(() => this.onend?.(), 10); }
+      abort() { this.stop(); }
+    }
+    (window as unknown as { webkitSpeechRecognition: unknown }).webkitSpeechRecognition = FakeRec;
+    (window as unknown as { SpeechRecognition: unknown }).SpeechRecognition = FakeRec;
+  });
+  await page.goto("/grammar");
+  await page.getByRole("button", { name: /Speak instead/ }).click();
+  const cancelledBefore = await page.evaluate(() => (window as unknown as { __cancelled: number }).__cancelled);
+  await page.getByRole("button", { name: "Start speaking" }).click();
+  await page.waitForTimeout(500);
+  await page.getByRole("button", { name: "Stop recording" }).click();
+  const box = page.locator("[aria-live=polite]").filter({ hasText: "yesterday" }).first();
+  await expect(box).toHaveText(/^\s*yesterday I go to office\s*$/);
+  expect(await page.evaluate(() => (window as unknown as { __cancelled: number }).__cancelled)).toBeGreaterThan(cancelledBefore);
+  await page.getByRole("button", { name: /Check grammar/ }).click();
+  await expect(page.getByText("Yesterday I went to the office.").first()).toBeVisible();
+});

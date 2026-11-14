@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { collapseRepeats, joinWithOverlap, mergeSession } from "./transcript";
 
 /* Minimal typings for the Web Speech API (not in lib.dom for all TS versions). */
 interface SRAlternative { transcript: string; confidence: number }
@@ -52,8 +53,11 @@ export function useSpeechRecognition(lang = "en-IN") {
   const [error, setError] = useState("");
   const [result, setResult] = useState<RecognitionResult>({ transcript: "", interim: "", confidence: null, durationSec: 0 });
   const recRef = useRef<SR | null>(null);
+  /** Text committed by earlier recognition sessions (Chrome restarts after silences). */
   const finalRef = useRef("");
   const confRef = useRef<number[]>([]);
+  /** Final text and confidences of the CURRENT session, rebuilt on every result event. */
+  const sessionRef = useRef<{ final: string; confidences: number[] }>({ final: "", confidences: [] });
   const startRef = useRef(0);
   const wantRef = useRef(false);
   const elapsedRef = useRef(0);
@@ -72,6 +76,7 @@ export function useSpeechRecognition(lang = "en-IN") {
   const reset = useCallback(() => {
     finalRef.current = "";
     confRef.current = [];
+    sessionRef.current = { final: "", confidences: [] };
     elapsedRef.current = 0;
     setResult({ transcript: "", interim: "", confidence: null, durationSec: 0 });
     setError("");
@@ -89,6 +94,9 @@ export function useSpeechRecognition(lang = "en-IN") {
         confRef.current = [];
         elapsedRef.current = 0;
       }
+      sessionRef.current = { final: "", confidences: [] };
+      // Stop the teacher's voice first, otherwise the microphone transcribes it as if you said it.
+      if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
       setError("");
       const rec = new Ctor();
       rec.lang = lang;
@@ -100,18 +108,16 @@ export function useSpeechRecognition(lang = "en-IN") {
         setStatus("listening");
       };
       rec.onresult = (e) => {
-        let interim = "";
-        for (let i = e.resultIndex; i < e.results.length; i++) {
-          const r = e.results[i];
-          if (r.isFinal) {
-            finalRef.current = (finalRef.current + " " + r[0].transcript).trim();
-            if (r[0].confidence > 0) confRef.current.push(r[0].confidence);
-          } else {
-            interim += r[0].transcript;
-          }
-        }
-        const conf = confRef.current.length ? confRef.current.reduce((a, b) => a + b, 0) / confRef.current.length : null;
-        setResult({ transcript: finalRef.current, interim, confidence: conf, durationSec: elapsedRef.current + (performance.now() - startRef.current) / 1000 });
+        // Rebuild this session from ALL results (not just from resultIndex) so cumulative or
+        // duplicated results from some browsers never repeat the sentence.
+        const raw = [];
+        for (let i = 0; i < e.results.length; i++) raw.push({ final: e.results[i].isFinal, text: e.results[i][0].transcript, confidence: e.results[i][0].confidence });
+        const merged = mergeSession(raw);
+        sessionRef.current = { final: merged.final, confidences: merged.confidences };
+        const transcript = collapseRepeats(joinWithOverlap(finalRef.current, merged.final));
+        const confs = [...confRef.current, ...merged.confidences];
+        const conf = confs.length ? confs.reduce((a, b) => a + b, 0) / confs.length : null;
+        setResult({ transcript, interim: merged.interim, confidence: conf, durationSec: elapsedRef.current + (performance.now() - startRef.current) / 1000 });
       };
       rec.onerror = (e) => {
         if (e.error === "not-allowed" || e.error === "service-not-allowed") {
@@ -125,6 +131,10 @@ export function useSpeechRecognition(lang = "en-IN") {
       };
       rec.onend = () => {
         elapsedRef.current += (performance.now() - startRef.current) / 1000;
+        // Commit this session's text before Chrome restarts listening.
+        finalRef.current = collapseRepeats(joinWithOverlap(finalRef.current, sessionRef.current.final));
+        confRef.current = [...confRef.current, ...sessionRef.current.confidences];
+        sessionRef.current = { final: "", confidences: [] };
         // Chrome stops after silence; restart while the learner still wants to talk.
         if (wantRef.current) {
           try {
