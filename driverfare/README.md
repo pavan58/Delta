@@ -90,14 +90,11 @@ npm run build && npm run test:e2e
 
 ## Deploy for free
 
-### GitHub Pages (included)
+### GitHub Pages (included, live)
 
-The workflow `.github/workflows/driverfare-pages.yml` runs on every change to `driverfare/`. It runs `npm ci`, `npm test` and `npm run build`. On the repository's default branch it also publishes `dist/` to GitHub Pages.
+Live site: **https://pavan58.github.io/Delta/**
 
-One-time setup:
-1. In the repository, go to **Settings → Pages → Build and deployment → Source** and choose **GitHub Actions**.
-2. Merge to the default branch, or run the workflow manually from the **Actions** tab on the default branch.
-3. The site appears at `https://<user>.github.io/<repo>/`.
+The workflow `.github/workflows/driverfare-pages.yml` runs on every change to `driverfare/`. It runs `npm ci`, `npm test` and `npm run build`. On the default branch it then force-pushes `dist/` to the `gh-pages` branch, which GitHub Pages serves (**Settings → Pages → Deploy from a branch → `gh-pages` / root**).
 
 The build uses relative paths (`base: './'`), so it works under any sub-path without changes.
 
